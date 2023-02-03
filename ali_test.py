@@ -59,82 +59,6 @@ local_transfo = transforms.Compose([
 ])
 ############################################################################################################
 
-# def find_intersection(Crop1, Crop2):
-#     top_intersection = max(Crop1.top, Crop2.top)
-#     bottom_intersection = min(Crop1.bottom, Crop2.bottom)
-#     left_intersection = max(Crop1.left, Crop2.left)
-#     right_intersection = min(Crop1.right, Crop2.right)
-
-#     if top_intersection >= bottom_intersection or left_intersection >= right_intersection:
-#         print("no intersection")
-#         intersection_coordinates = Coordinates(None, None, None, None)
-#     else:
-#         intersection_coordinates = Coordinates(top_intersection, bottom_intersection, left_intersection, right_intersection)
-#     return intersection_coordinates
-
-
-# def find_intersection_ids_in_crops(intersection_coordinates, crop_coordinates, local, flip):
-#     patches = np.arange(1, self.max_limit**2 + 1).reshape([self.max_limit, self.max_limit])
-
-#     width_ratio = (intersection_coordinates.right - intersection_coordinates.left)/(crop_coordinates.right - crop_coordinates.left)
-#     height_ratio = (intersection_coordinates.bottom - intersection_coordinates.top)/(crop_coordinates.bottom - crop_coordinates.top)
-
-#     width_quote = round(self.max_limit * width_ratio)
-#     height_quote = round(self.max_limit * height_ratio)
-
-#     start_pixel_width_ratio = (intersection_coordinates.left - crop_coordinates.left)/(crop_coordinates.right - crop_coordinates.left)
-#     start_pixel_height_ratio = (intersection_coordinates.top - crop_coordinates.top)/(crop_coordinates.bottom - crop_coordinates.top)
-
-#     start_patch_width = int(round(max_limit * start_pixel_width_ratio))
-#     start_patch_height = int(round(max_limit * start_pixel_height_ratio))
-
-#     end_patch_width = start_patch_width + width_quote
-#     end_patch_height = start_patch_height + height_quote
-
-#     if self.flip:
-#         start_patch_width, end_patch_width = end_patch_width, start_patch_width
-#         start_patch_width = max_limit - start_patch_width
-#         end_patch_width = max_limit - end_patch_width
-
-#     patches_view = patches[start_patch_height:end_patch_height, start_patch_width:end_patch_width]
-#     if self.flip:
-#         patches_view = np.fliplr(patches_view)
-
-#     return patches_view
-
-
-# def map_global2local(global_patches, local_patches):
-#     global_columns = global_patches.shape[1]
-#     global_rows = global_patches.shape[0]
-#     local_columns = local_patches.shape[1]
-#     local_rows = local_patches.shape[0]
-
-#     if global_columns >= local_columns:
-#         map_columns = [int(np.floor(i)) for i in np.linspace(0, global_columns-1, local_columns)]
-#         if global_rows >= local_rows:
-#             map_rows = [int(np.floor(i)) for i in np.linspace(0, global_rows-1, local_rows)]
-#             selected_global_patches = global_patches[map_rows, :][:, map_columns]
-#             selected_local_patches = local_patches
-#         else:
-#             map_rows = [int(np.floor(i)) for i in np.linspace(0, local_rows-1, global_rows)]
-#             selected_global_patches = global_patches[:, map_columns]
-#             selected_local_patches = local_patches[map_rows, :]
-
-#     else:
-#         map_columns = [int(np.floor(i)) for i in np.linspace(0, local_columns-1, global_columns)]
-#         if global_rows >= local_rows:
-#             map_rows = [int(np.floor(i)) for i in np.linspace(0, global_rows-1, local_rows)]
-#             selected_global_patches = global_patches[map_rows, :]
-#             selected_local_patches = local_patches[:, map_columns]
-#         else:
-#             map_rows = [int(np.floor(i)) for i in np.linspace(0, local_rows-1, global_rows)]
-#             selected_global_patches = global_patches
-#             selected_local_patches = local_patches[map_rows, :][:, map_columns]
-
-#     return selected_global_patches, selected_local_patches
-
-
-
 def display(im):
     im.show()
 
@@ -189,7 +113,7 @@ class augmented_crop():
         shape2 = [(0, 0), (self.side_length, 0)]
 
         img1 = ImageDraw.Draw(self.crop_with_patches)
-        for i in range(16, self.side_length,16):
+        for i in range(self.step_size, self.side_length, self.step_size):
             shape1[0] = (i, 0)
             shape1[1] = (i, self.side_length)
             shape2[0] = (0, i)
@@ -318,40 +242,13 @@ class correspondences():
         t3=Thread(target=display,args=(intersection_crop,))
         t3.start()
 
-# def patch_correspondences(crop1, crop2, crop1_coordinates, crop2_coordinates, flip1, flip2, show_patches=False):
-#     local1 = is_local(crop1)
-#     local2 = is_local(crop2)
-
-#     intersection_coordinates = find_intersection(crop1_coordinates, crop2_coordinates)
-#     print(f"top_intersection: {intersection_coordinates.top}, bottom_intersection: {intersection_coordinates.bottom}, left_intersection: {intersection_coordinates.left}, right_intersection: {intersection_coordinates.right}")
-
-#     crop1_patches = find_intersection_ids_in_crops(intersection_coordinates, crop1_coordinates, local=local1, flip = local_flip)
-#     crop2_patches = find_intersection_ids_in_crops(intersection_coordinates, crop2_coordinates, local=local2, flip = local_flip2)
-#     print(crop1_patches)
-#     print(crop2_patches)
-
-#     selected_crop1_patches, selected_crop2_patches = map_global2local(crop1_patches, crop2_patches)
-#     print(selected_crop1_patches)
-#     print(selected_crop2_patches)
-
-#     if show_patches == True:
-#         intersection_crop = image.crop((intersection_coordinates.left, intersection_coordinates.top, intersection_coordinates.right, intersection_coordinates.bottom))
-#         crop1 = draw_patches(crop1)
-#         crop2 = draw_patches(crop2)
-
-#         t1=Thread(target=display,args=(crop1,))
-#         t1.start()
-#         t2=Thread(target=display,args=(crop2,))
-#         t2.start()
-#         t3=Thread(target=display,args=(intersection_crop,))
-#         t3.start()
-
-
 #Augment images and find coordinates of the crops:
-#Global1:
 
+#Global:
 global1 = augmented_crop(global_transfo1, image)
 global2 = augmented_crop(global_transfo2, image)
+
+#Local:
 local1 = augmented_crop(local_transfo, image)
 local2 = augmented_crop(local_transfo, image)
 
@@ -359,167 +256,3 @@ local2 = augmented_crop(local_transfo, image)
 correspondences(global1, local1)
 # correspondences(global2, local2)
 # correspondences(local1, local2)
-
-# global_crop,[global_crop_properties, global_flip_and_color_jitter_returns] = global_transfo1(image)
-# print(global_flip_and_color_jitter_returns)
-# global_flip = global_flip_and_color_jitter_returns[0]
-# global_crop_coordinates = find_coordinates(global_crop_properties)
-
-# #Global2:
-# global_crop2,[global_crop_properties2, global_flip_and_color_jitter_returns2] = global_transfo2(image)
-# print(global_flip_and_color_jitter_returns2)
-# global_flip2 = global_flip_and_color_jitter_returns2[0]
-# global_crop2_coordinates = find_coordinates(global_crop_properties2)
-
-# #Local1:
-# local_crop,[local_crop_properties, local_flip_and_color_jitter_returns] = local_transfo(image)
-# print(local_flip_and_color_jitter_returns)
-# local_flip = local_flip_and_color_jitter_returns[0]
-# local_crop_coordinates = find_coordinates(local_crop_properties)
-
-# #Local2:
-# local_crop2,[local_crop_properties2, local_flip_and_color_jitter_returns2] = local_transfo(image)
-# print(local_flip_and_color_jitter_returns2)
-# local_flip2 = local_flip_and_color_jitter_returns2[0]
-# local_crop2_coordinates = find_coordinates(local_crop_properties2)
-
-############################################################################################################
-
-
-# patch_correspondences(local_crop, local_crop2, local_crop_coordinates, local_crop2_coordinates, local_flip, local_flip2, show_patches=True)
-# patch_correspondences(local_crop, global_crop, local_crop_coordinates, global_crop_coordinates, local_flip, global_flip, show_patches=True)
-# patch_correspondences(local_crop, global_crop2, local_crop_coordinates, global_crop2_coordinates, local_flip, global_flip2, show_patches=True)
-# patch_correspondences(global_crop, global_crop2, global_crop_coordinates, global_crop2_coordinates, global_flip, global_flip2, show_patches=True)
-############################################################################################################
-
-# intersection_coordinates = find_intersection(Crop1=crop_global, Crop2=crop_local)
-# print(f"top_intersection: {intersection_coordinates.top}, bottom_intersection: {intersection_coordinates.bottom}, left_intersection: {intersection_coordinates.left}, right_intersection: {intersection_coordinates.right}")
-
-# intersection_crop = image.crop((intersection_coordinates.left, intersection_coordinates.top, intersection_coordinates.right, intersection_coordinates.bottom))
-
-# # create line image
-# shape1 = [(0, 0), (0,224)]
-# shape2 = [(0, 0), (224,0)]
-
-# img1 = ImageDraw.Draw(global_crop)
-# for i in range(16,224,16):
-#     shape1[0] = (i,0)
-#     shape1[1] = (i,224)
-#     shape2[0] = (0,i)
-#     shape2[1] = (224,i)
-#     img1.line(shape1, fill ="black", width = 2)
-#     img1.line(shape2, fill ="black", width = 2)
-
-# # global_crop.show()
-
-# shape3 = [(0, 0), (0,96)]
-# shape4 = [(0, 0), (96,0)]
-
-# img2 = ImageDraw.Draw(local_crop)
-# for i in range(16,96,16):
-#     shape3[0] = (i,0)
-#     shape3[1] = (i,96)
-#     shape4[0] = (0,i)
-#     shape4[1] = (96,i)
-#     img2.line(shape3, fill ="black", width = 2)
-#     img2.line(shape4, fill ="black", width = 2)
-
-# local_crop.show()
-
-# t1=Thread(target=display,args=(global_crop,))
-# t1.start()
-# t2=Thread(target=display,args=(local_crop,))
-# t2.start()
-# t3=Thread(target=display,args=(intersection_crop,))
-# t3.start()
-
-# global_patches = find_intersection_ids_in_crops(intersection_coordinates, crop_global, local=False, flip = global_flip)
-# local_patches = find_intersection_ids_in_crops(intersection_coordinates, crop_local, local=True, flip = local_flip)
-# print(global_patches)
-# print(local_patches)
-
-# selected_global_patches, selected_local_patches = map_global2local(global_patches, local_patches)
-# print(selected_global_patches)
-# print(selected_local_patches)
-
-############################################################################################################
-# #2 Globals:
-# intersection_coordinates = find_intersection(Crop1=crop_global, Crop2=crop_global2)
-# print(f"top_intersection: {intersection_coordinates.top}, bottom_intersection: {intersection_coordinates.bottom}, left_intersection: {intersection_coordinates.left}, right_intersection: {intersection_coordinates.right}")
-# # image_crop_intersection = image.crop((left_intersection, top_intersection, right_intersection, bottom_intersection))
-
-# intersection_crop = image.crop((intersection_coordinates.left, intersection_coordinates.top, intersection_coordinates.right, intersection_coordinates.bottom))
-
-# # create line image
-# shape1 = [(0, 0), (0,224)]
-# shape2 = [(0, 0), (224,0)]
-
-# img1 = ImageDraw.Draw(global_crop)
-# for i in range(16,224,16):
-#     shape1[0] = (i,0)
-#     shape1[1] = (i,224)
-#     shape2[0] = (0,i)
-#     shape2[1] = (224,i)
-#     img1.line(shape1, fill ="black", width = 2)
-#     img1.line(shape2, fill ="black", width = 2)
-
-# # global_crop.show()
-
-# shape3 = [(0, 0), (0,96)]
-# shape4 = [(0, 0), (96,0)]
-
-# img2 = ImageDraw.Draw(global_crop2)
-# for i in range(16,224,16):
-#     shape3[0] = (i,0)
-#     shape3[1] = (i,224)
-#     shape4[0] = (0,i)
-#     shape4[1] = (224,i)
-#     img2.line(shape3, fill ="black", width = 2)
-#     img2.line(shape4, fill ="black", width = 2)
-
-# # local_crop.show()
-
-# t1=Thread(target=display,args=(global_crop,))
-# t1.start()
-# t2=Thread(target=display,args=(global_crop2,))
-# t2.start()
-# t3=Thread(target=display,args=(intersection_crop,))
-# t3.start()
-
-# global_patches = find_intersection_ids_in_crops(intersection_coordinates, crop_global, local=False, flip = global_flip)
-# local_patches = find_intersection_ids_in_crops(intersection_coordinates, crop_global2, local=False, flip = global_flip2)
-# print(global_patches)
-# print(local_patches)
-
-# selected_global_patches, selected_local_patches = map_global2local(global_patches, local_patches)
-# print(selected_global_patches)
-# print(selected_local_patches)
-############################################################################################################
-#2 Locals:
-# intersection_coordinates = find_intersection(Crop1=crop_local, Crop2=crop_local2)
-# print(f"top_intersection: {intersection_coordinates.top}, bottom_intersection: {intersection_coordinates.bottom}, left_intersection: {intersection_coordinates.left}, right_intersection: {intersection_coordinates.right}")
-# # image_crop_intersection = image.crop((left_intersection, top_intersection, right_intersection, bottom_intersection))
-
-# intersection_crop = image.crop((intersection_coordinates.left, intersection_coordinates.top, intersection_coordinates.right, intersection_coordinates.bottom))
-
-# local_crop = draw_patches(local_crop)
-# local_crop2 = draw_patches(local_crop2)
-
-
-# t1=Thread(target=display,args=(local_crop,))
-# t1.start()
-# t2=Thread(target=display,args=(local_crop2,))
-# t2.start()
-# t3=Thread(target=display,args=(intersection_crop,))
-# t3.start()
-
-# local_patches1 = find_intersection_ids_in_crops(intersection_coordinates, crop_local, local=True, flip = local_flip)
-# local_patches2 = find_intersection_ids_in_crops(intersection_coordinates, crop_local2, local=True, flip = local_flip2)
-# print(local_patches1)
-# print(local_patches2)
-
-# selected_local_patches1, selected_local_patches2 = map_global2local(local_patches1, local_patches2)
-# print(selected_local_patches1)
-# print(selected_local_patches2)
-
-
