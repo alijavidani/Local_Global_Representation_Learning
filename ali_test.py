@@ -72,26 +72,26 @@ class Coordinates:
 class augmented_crop():
     def __init__(self, transformation, image):
         self.transformation = transformation
-        self.step_size = 16
+        self.patch_size = 16
 
         self.original_image = image
         self.original_height = image.height
         self.original_width = image.width
 
-        self.number_of_patches_per_row = self.original_width//self.step_size
-        self.number_of_patches_per_column = self.original_height//self.step_size
+        self.number_of_patches_per_row = self.original_width//self.patch_size
+        self.number_of_patches_per_column = self.original_height//self.patch_size
 
         self.crop,[crop_properties, flip_and_color_jitter_returns] = transformation(image)
-        print(flip_and_color_jitter_returns)
+        # print(flip_and_color_jitter_returns)
         
         self.is_local()
-        print(self.local)
+        # print(self.local)
 
         self.find_coordinates(crop_properties)
-        print(self.crop_coordinates.bottom)
+        # print(self.crop_coordinates.bottom)
         
         self.flip = flip_and_color_jitter_returns[0]
-        print(self.flip)
+        # print(self.flip)
 
         # self.find_intersection_ids_in_original_image()
         # print(self.indices_in_original_image)
@@ -105,7 +105,7 @@ class augmented_crop():
             self.side_length = 96
             self.local = True
         
-        self.patches_per_side = self.side_length // self.step_size
+        self.patches_per_side = self.side_length // self.patch_size
 
     def draw_patches(self):
         self.crop_with_patches = self.crop.copy()
@@ -113,7 +113,7 @@ class augmented_crop():
         shape2 = [(0, 0), (self.side_length, 0)]
 
         img1 = ImageDraw.Draw(self.crop_with_patches)
-        for i in range(self.step_size, self.side_length, self.step_size):
+        for i in range(self.patch_size, self.side_length, self.patch_size):
             shape1[0] = (i, 0)
             shape1[1] = (i, self.side_length)
             shape2[0] = (0, i)
@@ -132,30 +132,37 @@ class augmented_crop():
 
     def find_intersection_ids_in_original_image(self):
         indices = []
-        for i in range(self.crop_coordinates.top, self.crop_coordinates.bottom, self.step_size):
-            for j in range(self.crop_coordinates.left, self.crop_coordinates.right, self.step_size):
-                index_number = int((i/self.step_size) * self.number_of_patches_per_row + (j/self.step_size) + 1)
+        for i in range(self.crop_coordinates.top, self.crop_coordinates.bottom, self.patch_size):
+            for j in range(self.crop_coordinates.left, self.crop_coordinates.right, self.patch_size):
+                index_number = int((i/self.patch_size) * self.number_of_patches_per_row + (j/self.patch_size) + 1)
                 indices.append(index_number)
         self.indices_in_original_image = indices
 
+
 class correspondences():
-    def __init__(self, augmented_crop1, augmented_crop2):
+    def __init__(self, augmented_crop1, augmented_crop2, show_patches=False):
         self.augmented_crop1 = augmented_crop1
         self.augmented_crop2 = augmented_crop2
 
         self.find_intersection(augmented_crop1, augmented_crop2)
-        print(f"top_intersection: {self.intersection_coordinates.top}, bottom_intersection: {self.intersection_coordinates.bottom}, left_intersection: {self.intersection_coordinates.left}, right_intersection: {self.intersection_coordinates.right}")
 
-        self.crop1_patches = self.find_intersection_ids_in_crops(self.augmented_crop1)
-        self.crop2_patches = self.find_intersection_ids_in_crops(self.augmented_crop2)
-        print(self.crop1_patches)
-        print(self.crop2_patches)
+        if show_patches:
+            self.show_patches()
 
-        self.selected_crop1_patches, self.selected_crop2_patches = self.map_global2local(self.crop1_patches, self.crop2_patches)
+        if self.intersection_coordinates is not None:
+            self.crop1_patches = self.find_intersection_ids_in_crops(self.augmented_crop1)
+            self.crop2_patches = self.find_intersection_ids_in_crops(self.augmented_crop2)
+            # print(self.crop1_patches)
+            # print(self.crop2_patches)
+            self.selected_crop1_patches, self.selected_crop2_patches = self.map_crop1_to_crop2(self.crop1_patches, self.crop2_patches)
+
+        else:
+            self.selected_crop1_patches = []
+            self.selected_crop2_patches = []
+
         print(self.selected_crop1_patches)
         print(self.selected_crop2_patches)
 
-        self.show_patches()
 
     def find_intersection(self, augmented_crop1, augmented_crop2):
         top_intersection = max(augmented_crop1.crop_coordinates.top, augmented_crop2.crop_coordinates.top)
@@ -165,7 +172,7 @@ class correspondences():
 
         if top_intersection >= bottom_intersection or left_intersection >= right_intersection:
             print("no intersection")
-            self.intersection_coordinates = Coordinates(None, None, None, None)
+            self.intersection_coordinates = None
         else:
             self.intersection_coordinates = Coordinates(top_intersection, bottom_intersection, left_intersection, right_intersection)
 
@@ -200,38 +207,38 @@ class correspondences():
         return patches_view
 
 
-    def map_global2local(self, global_patches, local_patches):
-        global_rows, global_columns = global_patches.shape
-        local_rows, local_columns = local_patches.shape
+    def map_crop1_to_crop2(self, crop1_patches, crop2_patches):
+        global_rows, global_columns = crop1_patches.shape
+        local_rows, local_columns = crop2_patches.shape
 
         if global_columns >= local_columns:
             map_columns = [int(np.floor(i)) for i in np.linspace(0, global_columns-1, local_columns)]
             if global_rows >= local_rows:
                 map_rows = [int(np.floor(i)) for i in np.linspace(0, global_rows-1, local_rows)]
-                selected_global_patches = global_patches[map_rows, :][:, map_columns]
-                selected_local_patches = local_patches
+                selected_crop1_patches = crop1_patches[map_rows, :][:, map_columns]
+                selected_crop2_patches = crop2_patches
             else:
                 map_rows = [int(np.floor(i)) for i in np.linspace(0, local_rows-1, global_rows)]
-                selected_global_patches = global_patches[:, map_columns]
-                selected_local_patches = local_patches[map_rows, :]
+                selected_crop1_patches = crop1_patches[:, map_columns]
+                selected_crop2_patches = crop2_patches[map_rows, :]
 
         else:
             map_columns = [int(np.floor(i)) for i in np.linspace(0, local_columns-1, global_columns)]
             if global_rows >= local_rows:
                 map_rows = [int(np.floor(i)) for i in np.linspace(0, global_rows-1, local_rows)]
-                selected_global_patches = global_patches[map_rows, :]
-                selected_local_patches = local_patches[:, map_columns]
+                selected_crop1_patches = crop1_patches[map_rows, :]
+                selected_crop2_patches = crop2_patches[:, map_columns]
             else:
                 map_rows = [int(np.floor(i)) for i in np.linspace(0, local_rows-1, global_rows)]
-                selected_global_patches = global_patches
-                selected_local_patches = local_patches[map_rows, :][:, map_columns]
+                selected_crop1_patches = crop1_patches
+                selected_crop2_patches = crop2_patches[map_rows, :][:, map_columns]
 
-        return selected_global_patches, selected_local_patches
+        selected_crop1_patches = list(selected_crop1_patches.flatten())
+        selected_crop2_patches = list(selected_crop2_patches.flatten())
+        return selected_crop1_patches, selected_crop2_patches
 
 
     def show_patches(self):
-    # if show_patches == True:
-        intersection_crop = self.augmented_crop1.original_image.crop((self.intersection_coordinates.left, self.intersection_coordinates.top, self.intersection_coordinates.right, self.intersection_coordinates.bottom))
         crop1 = self.augmented_crop1.draw_patches()
         crop2 = self.augmented_crop2.draw_patches()
 
@@ -239,8 +246,11 @@ class correspondences():
         t1.start()
         t2=Thread(target=display,args=(crop2,))
         t2.start()
-        t3=Thread(target=display,args=(intersection_crop,))
-        t3.start()
+
+        if(self.intersection_coordinates is not None):
+            intersection_crop = self.augmented_crop1.original_image.crop((self.intersection_coordinates.left, self.intersection_coordinates.top, self.intersection_coordinates.right, self.intersection_coordinates.bottom))
+            t3=Thread(target=display,args=(intersection_crop,))
+            t3.start()
 
 #Augment images and find coordinates of the crops:
 
@@ -253,6 +263,9 @@ local1 = augmented_crop(local_transfo, image)
 local2 = augmented_crop(local_transfo, image)
 
 # correspondences(global1, global2)
-correspondences(global1, local1)
+# correspondences(global1, local1, show_patches=True)
 # correspondences(global2, local2)
-# correspondences(local1, local2)
+c1 = correspondences(local1, local2, show_patches=True)
+print(c1.selected_crop1_patches)
+print(c1.selected_crop2_patches)
+
