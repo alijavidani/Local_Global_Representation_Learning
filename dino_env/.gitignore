@@ -1,0 +1,12 @@
+# created by virtualenv automatically
+*
+!.gitignore
+!Lib/
+Lib/*
+!Lib/site-packages/
+Lib/site-packages/*
+!Lib/site-packages/torchvision/
+Lib/site-packages/torchvision/*
+!Lib/site-packages/torchvision/transforms/
+Lib/site-packages/torchvision/transforms/*
+!Lib/site-packages/torchvision/transforms/transforms.py
