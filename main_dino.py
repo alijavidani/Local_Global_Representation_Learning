@@ -400,8 +400,10 @@ class DINOLoss(nn.Module):
                 if v == iq:
                     # we skip cases where student and teacher operate on the same view
                     continue
-                loss = torch.sum(-q * F.log_softmax(student_out[v], dim=-1), dim=-1)
-                total_loss += loss.mean()
+                student_out_softmax = F.log_softmax(student_out[v], dim=-1)
+                cross_entropy_loss = -q * student_out_softmax
+                loss_sum = torch.sum(cross_entropy_loss, dim=-1)
+                total_loss += loss_sum.mean()
                 n_loss_terms += 1
         total_loss /= n_loss_terms
         self.update_center(teacher_output)
