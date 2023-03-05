@@ -56,7 +56,7 @@ def get_args_parser():
         values leads to better performance but requires more memory. Applies only
         for ViTs (vit_tiny, vit_small and vit_base). If <16, we recommend disabling
         mixed precision training (--use_fp16 false) to avoid unstabilities.""")
-    parser.add_argument('--out_dim', default=65536, type=int, help="""Dimensionality of
+    parser.add_argument('--out_dim', default=1000, type=int, help="""Dimensionality of
         the DINO head output. For complex and large datasets large values (like 65k) work well.""")
     parser.add_argument('--norm_last_layer', default=True, type=utils.bool_flag,
         help="""Whether or not to weight normalize the last layer of the DINO head.
@@ -91,7 +91,7 @@ def get_args_parser():
     parser.add_argument('--clip_grad', type=float, default=3.0, help="""Maximal parameter
         gradient norm if using gradient clipping. Clipping with norm .3 ~ 1.0 can
         help optimization for larger ViT architectures. 0 for disabling.""")
-    parser.add_argument('--batch_size_per_gpu', default=1, type=int,
+    parser.add_argument('--batch_size_per_gpu', default=4, type=int,
         help='Per-GPU batch-size : number of distinct images loaded on one GPU.')
     parser.add_argument('--epochs', default=100, type=int, help='Number of epochs of training.')
     parser.add_argument('--freeze_last_layer', default=1, type=int, help="""Number of epochs
@@ -413,6 +413,8 @@ class DINOLoss(nn.Module):
         teacher_out = teacher_out.detach().chunk(2)
 
         total_loss = 0
+        total_loss_mean = 0
+        total_loss_sum = 0
         n_loss_terms = 0
         for iq, q in enumerate(teacher_out):
             for v in range(len(student_out)):
@@ -426,17 +428,24 @@ class DINOLoss(nn.Module):
                     tensor2 = student_out[v][k, corr.selected_crop2_patches, :]
 
                     # Calculate Loss:
-                    loss = torch.sum(-tensor1* F.log_softmax(tensor2, dim=-1), dim=-1)
-                    total_loss += loss.mean()
+                    tensor2_softmax = F.log_softmax(tensor2, dim=-1)
+                    cross_entropy_loss = - tensor1 * tensor2_softmax
+                    loss_sum = torch.sum(cross_entropy_loss, dim=-1)
+                    step_loss = loss_sum.sum()
+
+                    total_loss_mean += loss_sum.mean()
+                    total_loss_sum += loss_sum.sum()
                     n_loss_terms += 1
 
-        total_loss /= n_loss_terms
+        total_loss = total_loss_sum / n_loss_terms
         self.update_center(teacher_output)
         return total_loss
 
-        #         loss = torch.sum(-q * F.log_softmax(student_out[v], dim=-1), dim=-1)
-        #         total_loss += loss.mean()
-        #         n_loss_terms += 1
+        # Original Dino Loss Function:
+        # student_out_softmax = F.log_softmax(student_out[v], dim=-1)
+        # cross_entropy_loss = -q * student_out_softmax
+        # loss_sum = torch.sum(cross_entropy_loss, dim=-1)
+        # total_loss += loss_sum.mean()
         # total_loss /= n_loss_terms
         # self.update_center(teacher_output)
         # return total_loss
@@ -503,15 +512,6 @@ class DataAugmentationDINO(object):
 
         augmented_crops = [global1, global2] + local_augmented_crops
         return augmented_crops
-
-
-    # def __call__(self, image):
-    #     crops = []
-    #     crops.append(self.global_transfo1(image))
-    #     crops.append(self.global_transfo2(image))
-    #     for _ in range(self.local_crops_number):
-    #         crops.append(self.local_transfo(image))
-    #     return crops
 
 
 if __name__ == '__main__':
