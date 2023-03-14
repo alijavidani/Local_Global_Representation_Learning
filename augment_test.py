@@ -16,6 +16,9 @@ teacher = utils.MultiCropWrapper(
     DINOHead(192, 65536, False),
 )
 
+global_scale= 224
+local_scale= 96
+
 # Read image
 image = Image.open('C://Users//alija/Desktop/test.png').convert('RGB')
   
@@ -37,7 +40,7 @@ my_transform = transforms.Compose([transforms.RandomResizedCrop(size=(96), scale
 
 # first global crop
 global_transfo1 = transforms.Compose([
-    transforms.RandomResizedCrop(224, scale=(0.4, 1.), interpolation=Image.Resampling.BICUBIC),
+    transforms.RandomResizedCrop(global_scale, scale=(0.4, 1.), interpolation=Image.Resampling.BICUBIC),
     flip_and_color_jitter,
     utils.GaussianBlur(1.0),
     normalize,
@@ -45,7 +48,7 @@ global_transfo1 = transforms.Compose([
 
 #second global crop
 global_transfo2 = transforms.Compose([
-            transforms.RandomResizedCrop(224, scale=(0.4, 1.), interpolation=Image.BICUBIC),
+            transforms.RandomResizedCrop(global_scale, scale=(0.4, 1.), interpolation=Image.BICUBIC),
             flip_and_color_jitter,
             utils.GaussianBlur(0.1),
             utils.Solarization(0.2),
@@ -54,19 +57,21 @@ global_transfo2 = transforms.Compose([
 
 # first local crop
 local_transfo = transforms.Compose([
-    transforms.RandomResizedCrop(96, scale=(0.05, 0.4), interpolation=Image.Resampling.BICUBIC),
+    transforms.RandomResizedCrop(local_scale, scale=(0.05, 0.4), interpolation=Image.Resampling.BICUBIC),
     flip_and_color_jitter,
     utils.GaussianBlur(p=0.5),
     normalize,
 ])
 ############################################################################################################
+patch_size = 16
+
 #Global:
-global1 = augmented_crop(global_transfo1, image)
-global2 = augmented_crop(global_transfo2, image)
+global1 = augmented_crop(global_transfo1, image, patch_size=patch_size, global_scale=global_scale, local_scale=local_scale)
+global2 = augmented_crop(global_transfo2, image, patch_size=patch_size, global_scale=global_scale, local_scale=local_scale)
 
 #Local:
-local1 = augmented_crop(local_transfo, image)
-local2 = augmented_crop(local_transfo, image)
+local1 = augmented_crop(local_transfo, image, patch_size=patch_size, global_scale=global_scale, local_scale=local_scale)
+local2 = augmented_crop(local_transfo, image, patch_size=patch_size, global_scale=global_scale, local_scale=local_scale)
 
 # c1 = correspondences(global1, global2)
 # correspondences(global1, local1, show_patches=True)
