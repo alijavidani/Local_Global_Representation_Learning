@@ -36,7 +36,8 @@ from vision_transformer import DINOHead
 from augment import augmented_crop, correspondences
 
 # import os
-os.environ["PL_TORCH_DISTRIBUTED_BACKEND"] = "gloo"
+os.environ["PL_TORCH_DISTRIBUTED_BACKEND"] = "nccl"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 torchvision_archs = sorted(name for name in torchvision_models.__dict__
     if name.islower() and not name.startswith("__")
@@ -46,17 +47,17 @@ def get_args_parser():
     parser = argparse.ArgumentParser('DINO', add_help=False)
 
     # Model parameters
-    parser.add_argument('--arch', default='vit_tiny', type=str,
+    parser.add_argument('--arch', default='vit_small', type=str,
         choices=['vit_tiny', 'vit_small', 'vit_base', 'xcit', 'deit_tiny', 'deit_small'] \
                 + torchvision_archs + torch.hub.list("facebookresearch/xcit:main"),
         help="""Name of architecture to train. For quick experiments with ViTs,
         we recommend using vit_tiny or vit_small.""")
-    parser.add_argument('--patch_size', default=16, type=int, help="""Size in pixels
+    parser.add_argument('--patch_size', default=32, type=int, help="""Size in pixels
         of input square patches - default 16 (for 16x16 patches). Using smaller
         values leads to better performance but requires more memory. Applies only
         for ViTs (vit_tiny, vit_small and vit_base). If <16, we recommend disabling
         mixed precision training (--use_fp16 false) to avoid unstabilities.""")
-    parser.add_argument('--out_dim', default=65536, type=int, help="""Dimensionality of
+    parser.add_argument('--out_dim', default=1000, type=int, help="""Dimensionality of
         the DINO head output. For complex and large datasets large values (like 65k) work well.""")
     parser.add_argument('--norm_last_layer', default=True, type=utils.bool_flag,
         help="""Whether or not to weight normalize the last layer of the DINO head.
@@ -91,7 +92,7 @@ def get_args_parser():
     parser.add_argument('--clip_grad', type=float, default=3.0, help="""Maximal parameter
         gradient norm if using gradient clipping. Clipping with norm .3 ~ 1.0 can
         help optimization for larger ViT architectures. 0 for disabling.""")
-    parser.add_argument('--batch_size_per_gpu', default=1, type=int,
+    parser.add_argument('--batch_size_per_gpu', default=200, type=int,
         help='Per-GPU batch-size : number of distinct images loaded on one GPU.')
     parser.add_argument('--epochs', default=100, type=int, help='Number of epochs of training.')
     parser.add_argument('--freeze_last_layer', default=1, type=int, help="""Number of epochs
@@ -121,12 +122,12 @@ def get_args_parser():
         Used for small local view cropping of multi-crop.""")
 
     # Misc
-    parser.add_argument('--data_path', default='F:\PhD\Datasets\cifar-10-batches-py\pixel_data_label_train', type=str,
+    parser.add_argument('--data_path', default='/home/alij/Datasets/Cifar10/pixel_data_label_train', type=str,
         help='Please specify path to the ImageNet training data.')
-    parser.add_argument('--output_dir', default=".\outputs", type=str, help='Path to save logs and checkpoints.')
+    parser.add_argument('--output_dir', default="./checkpoints/sum_checkpoints_patch32_out1000_small", type=str, help='Path to save logs and checkpoints.')
     parser.add_argument('--saveckp_freq', default=20, type=int, help='Save checkpoint every x epochs.')
     parser.add_argument('--seed', default=0, type=int, help='Random seed.')
-    parser.add_argument('--num_workers', default=0, type=int, help='Number of data loading workers per GPU.')
+    parser.add_argument('--num_workers', default=15, type=int, help='Number of data loading workers per GPU.')
     parser.add_argument("--dist_url", default="env://", type=str, help="""url used to set up
         distributed training; see https://pytorch.org/docs/stable/distributed.html""")
     parser.add_argument("--local_rank", default=0, type=int, help="Please ignore and do not set this argument.")
@@ -226,6 +227,7 @@ def train_dino(args):
 
     # ============ preparing loss ... ============
     dino_loss = DINOLoss(
+        args.patch_size,
         args.out_dim,
         args.local_crops_number + 2,  # total number of crops = 2 global crops + local_crops_number
         args.warmup_teacher_temp,
@@ -384,14 +386,14 @@ def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loade
 
 
 class DINOLoss(nn.Module):
-    def __init__(self, out_dim, ncrops, warmup_teacher_temp, teacher_temp,
+    def __init__(self, patch_size, out_dim, ncrops, warmup_teacher_temp, teacher_temp,
                  warmup_teacher_temp_epochs, nepochs, student_temp=0.1,
                  center_momentum=0.9):
         super().__init__()
         self.student_temp = student_temp
         self.center_momentum = center_momentum
         self.ncrops = ncrops
-        self.register_buffer("center", torch.zeros(1, out_dim))
+        self.register_buffer("center", torch.zeros(1, pow(int(224/patch_size),2) + 1, out_dim))
         # we apply a warm up for the teacher temperature because
         # a too high temperature makes the training instable at the beginning
         self.teacher_temp_schedule = np.concatenate((
@@ -422,12 +424,12 @@ class DINOLoss(nn.Module):
                 for k in range(len(data)):
                     # Calculate patch correspondences:
                     corr = correspondences(data[k][iq], data[k][v])
-                    tensor1 = teacher_out[iq][k, corr.selected_crop1_patches, :]
-                    tensor2 = student_out[v][k, corr.selected_crop2_patches, :]
+                    tensor1 = teacher_out[iq][k, corr.selected_crop1_patches[0], :]
+                    tensor2 = student_out[v][k, corr.selected_crop2_patches[0], :]
 
                     # Calculate Loss:
                     loss = torch.sum(-tensor1* F.log_softmax(tensor2, dim=-1), dim=-1)
-                    total_loss += loss.mean()
+                    total_loss += loss.sum()
                     n_loss_terms += 1
 
         total_loss /= n_loss_terms

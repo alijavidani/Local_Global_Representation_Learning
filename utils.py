@@ -486,7 +486,7 @@ def init_distributed_mode(args):
         sys.exit(1)
 
     dist.init_process_group(
-        backend="gloo",
+        backend="nccl",
         init_method=args.dist_url,
         world_size=args.world_size,
         rank=args.rank,
@@ -623,8 +623,8 @@ class MultiCropWrapper(nn.Module):
             if isinstance(_out, tuple):
                 _out = _out[0]
 
-            if _out.shape[1] == 37:
-                zeros_tensor = torch.zeros([batch_size_per_gpu*local_crops_number, 160, 192]).to(x[0].device)
+            if _out.shape[1] == 10:#37
+                zeros_tensor = torch.zeros([batch_size_per_gpu*local_crops_number, 40, 384]).to(x[0].device) #160
                 # zeros_tensor = torch.empty([32, 160, 192]).to(x[0].device)
                 _out = torch.cat((_out, zeros_tensor), dim=1)
 

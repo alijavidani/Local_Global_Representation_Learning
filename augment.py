@@ -20,7 +20,7 @@ class Coordinates:
 class augmented_crop():
     def __init__(self, transformation, image):
         self.transformation = transformation
-        self.patch_size = 16
+        self.patch_size = 32
 
         self.original_image = image
         self.original_height = image.height
