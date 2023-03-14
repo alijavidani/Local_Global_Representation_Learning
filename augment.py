@@ -18,9 +18,11 @@ class Coordinates:
         self.right = right
 
 class augmented_crop():
-    def __init__(self, transformation, image):
+    def __init__(self, transformation, image, patch_size=16, global_scale=224, local_scale=96):
         self.transformation = transformation
-        self.patch_size = 32
+        self.patch_size = patch_size
+        self.global_scale = global_scale
+        self.local_scale = local_scale
 
         self.original_image = image
         self.original_height = image.height
@@ -54,12 +56,12 @@ class augmented_crop():
         # print(self.indices_in_original_image)
 
     def is_local(self):
-        if self.crop.size == (224,224):
-            self.side_length = 224
+        if self.crop.size == (self.global_scale, self.global_scale):
+            self.side_length = self.global_scale
             self.local = False
 
-        elif self.crop.size == (96,96):
-            self.side_length = 96
+        elif self.crop.size == (self.local_scale, self.local_scale):
+            self.side_length = self.local_scale
             self.local = True
         
         self.patches_per_side = self.side_length // self.patch_size
