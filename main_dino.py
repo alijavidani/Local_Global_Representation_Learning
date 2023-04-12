@@ -34,6 +34,7 @@ import utils
 import vision_transformer as vits
 from vision_transformer import DINOHead
 from augment import augmented_crop, correspondences
+import math
 
 os.environ["PL_TORCH_DISTRIBUTED_BACKEND"] = "nccl"
 os.environ["CUDA_VISIBLE_DEVICES"]="0,1,3"
@@ -121,6 +122,7 @@ def get_args_parser():
         Used for small local view cropping of multi-crop.""")
 
     # Misc
+    # ImageNet path: /amin/imagenet/imagenet/train
     parser.add_argument('--data_path', default='/home/alij/Datasets/Cifar10/pixel_data_label_train', type=str,
         help='Please specify path to the ImageNet training data.')
     parser.add_argument('--output_dir', default="./checkpoints/mean_patch16_out1000_tiny_fp32", type=str, help='Path to save logs and checkpoints.')
@@ -333,10 +335,16 @@ def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loade
                 param_group["weight_decay"] = wd_schedule[it]
 
         # Decompose data:
-        images = [torch.empty((len(data),3,args.global_scale,args.global_scale))] * 2 + [torch.empty((len(data),3,args.local_scale,args.local_scale))] * (len(data[0])-2)
+        images =[
+            torch.empty((len(data),3,args.global_scale,args.global_scale)),torch.empty((len(data),3,args.global_scale,args.global_scale)),
+            torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
+            torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
+            torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
+            torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
+        ]
         for i in range(len(data[0])):
             for j in range(len(data)):
-                images[i][j] = data[j][i].crop_tensor_normed
+                images[i][j] = data[j][i].crop_tensor_normed.detach().clone()
 
         # images = [d[0] for d in data]
         # images_coordinates = [d[1][0] for d in data]
@@ -399,7 +407,7 @@ class DINOLoss(nn.Module):
         self.student_temp = student_temp
         self.center_momentum = center_momentum
         self.ncrops = ncrops
-        self.register_buffer("center", torch.zeros(1, pow(int(224/patch_size),2) + 1, out_dim))
+        self.register_buffer("center", torch.zeros(1, pow(int(224/patch_size),2) + 1, out_dim))#
         # we apply a warm up for the teacher temperature because
         # a too high temperature makes the training instable at the beginning
         self.teacher_temp_schedule = np.concatenate((
@@ -424,28 +432,52 @@ class DINOLoss(nn.Module):
         total_loss_mean = 0
         total_loss_sum = 0
         n_loss_terms = 0
+        lamda = 0.7
+
         for iq, q in enumerate(teacher_out):
             for v in range(len(student_out)):
                 if v == iq:
                     # we skip cases where student and teacher operate on the same view
                     continue
+
+                # loss = torch.sum(-q * F.log_softmax(student_out[v], dim=-1), dim=-1)
+                # total_loss += loss.mean()
+                # n_loss_terms += 1
+
                 for k in range(len(data)):
                     # Calculate patch correspondences:
                     corr = correspondences(data[k][iq], data[k][v])
-                    tensor1 = teacher_out[iq][k, corr.selected_crop1_patches[0], :]
-                    tensor2 = student_out[v][k, corr.selected_crop2_patches[0], :]
+                    tensor1 = teacher_out[iq][k, corr.selected_crop1_patches, :]
+                    tensor2 = student_out[v][k, corr.selected_crop2_patches, :]
 
                     # Calculate Loss:
                     tensor2_softmax = F.log_softmax(tensor2, dim=-1)
                     cross_entropy_loss = - tensor1 * tensor2_softmax
                     loss_sum = torch.sum(cross_entropy_loss, dim=-1)
-                    step_loss = loss_sum.sum()
+                    # step_loss = loss_sum.sum()
 
                     total_loss_mean += loss_sum.mean()
                     total_loss_sum += loss_sum.mean()
                     n_loss_terms += 1
 
+                    #Method3 loss function (mean):
+                    total_loss_sum += loss_sum.mean()
+
+                    #Method2 loss function:
+                    # if len(loss_sum) == 1:
+                    #     total_loss_sum += loss_sum[0]
+                    # elif len(loss_sum) > 1:
+                    #     total_loss_sum += lamda * loss_sum[0] * (len(loss_sum)-1) + (1-lamda)*(loss_sum[1:].sum())
+
+                    #Method1 loss function:
+                    # total_loss_sum += lamda * loss_sum[0] 
+                    # if len(loss_sum) > 1:
+                    #     total_loss_sum += (1-lamda)*(loss_sum[1:].mean())
+                   
+                    n_loss_terms += 1
         total_loss = total_loss_sum / n_loss_terms
+                
+        # total_loss /= n_loss_terms
         self.update_center(teacher_output)
         return total_loss
 
