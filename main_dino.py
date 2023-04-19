@@ -38,7 +38,7 @@ import math
 
 #import os
 os.environ["PL_TORCH_DISTRIBUTED_BACKEND"] = "nccl"
-os.environ["CUDA_VISIBLE_DEVICES"]="0,1"
+os.environ["CUDA_VISIBLE_DEVICES"]="0,1,3"
 
 torchvision_archs = sorted(name for name in torchvision_models.__dict__
     if name.islower() and not name.startswith("__")
@@ -58,7 +58,7 @@ def get_args_parser():
         values leads to better performance but requires more memory. Applies only
         for ViTs (vit_tiny, vit_small and vit_base). If <16, we recommend disabling
         mixed precision training (--use_fp16 false) to avoid unstabilities.""")
-    parser.add_argument('--out_dim', default=1000, type=int, help="""Dimensionality of
+    parser.add_argument('--out_dim', default=65000, type=int, help="""Dimensionality of
         the DINO head output. For complex and large datasets large values (like 65k) work well.""")
     parser.add_argument('--norm_last_layer', default=True, type=utils.bool_flag,
         help="""Whether or not to weight normalize the last layer of the DINO head.
@@ -93,7 +93,7 @@ def get_args_parser():
     parser.add_argument('--clip_grad', type=float, default=3.0, help="""Maximal parameter
         gradient norm if using gradient clipping. Clipping with norm .3 ~ 1.0 can
         help optimization for larger ViT architectures. 0 for disabling.""")
-    parser.add_argument('--batch_size_per_gpu', default=80, type=int,
+    parser.add_argument('--batch_size_per_gpu', default=50, type=int,
         help='Per-GPU batch-size : number of distinct images loaded on one GPU.')
     parser.add_argument('--epochs', default=100, type=int, help='Number of epochs of training.')
     parser.add_argument('--freeze_last_layer', default=1, type=int, help="""Number of epochs
@@ -124,12 +124,13 @@ def get_args_parser():
 
     # Misc
     # ImageNet path: /amin/imagenet/imagenet/train
-    parser.add_argument('--data_path', default='/home/alij/Datasets/Cifar10/pixel_data_label_train', type=str,
+    # Cifar10 path: /home/alij/Datasets/Cifar10/pixel_data_label_train
+    parser.add_argument('--data_path', default='/amin/imagenet/imagenet/train', type=str,
         help='Please specify path to the ImageNet training data.')
-    parser.add_argument('--output_dir', default="./checkpoints/mean_patch32_out1000_tiny", type=str, help='Path to save logs and checkpoints.')
+    parser.add_argument('--output_dir', default="./checkpoints/mean_patch32_out65000_tiny_imagenet10%", type=str, help='Path to save logs and checkpoints.')
     parser.add_argument('--saveckp_freq', default=20, type=int, help='Save checkpoint every x epochs.')
     parser.add_argument('--seed', default=0, type=int, help='Random seed.')
-    parser.add_argument('--num_workers', default=15, type=int, help='Number of data loading workers per GPU.')
+    parser.add_argument('--num_workers', default=8, type=int, help='Number of data loading workers per GPU.')
     parser.add_argument("--dist_url", default="env://", type=str, help="""url used to set up
         distributed training; see https://pytorch.org/docs/stable/distributed.html""")
     parser.add_argument("--local_rank", default=0, type=int, help="Please ignore and do not set this argument.")
@@ -164,10 +165,12 @@ def train_dino(args):
         args.local_crops_scale,
         args.local_crops_number,
     )
+
     dataset = datasets.ImageFolder(args.data_path, transform=transform)
-    sampler = torch.utils.data.DistributedSampler(dataset, shuffle=True)
+    data = torch.utils.data.Subset(dataset, range(0, int(len(dataset)/10), 1))
+    sampler = torch.utils.data.DistributedSampler(data, shuffle=True)
     data_loader = torch.utils.data.DataLoader(
-        dataset,
+        data,
         sampler=sampler,
         batch_size=args.batch_size_per_gpu,
         num_workers=args.num_workers,
