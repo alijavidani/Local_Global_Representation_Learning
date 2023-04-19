@@ -123,9 +123,11 @@ def get_args_parser():
 
     # Misc
     # ImageNet path: /amin/imagenet/imagenet/train
-    parser.add_argument('--data_path', default='/home/alij/Datasets/Cifar10/pixel_data_label_train', type=str,
+    # Cifar10 path:/home/alij/Datasets/Cifar10/pixel_data_label_train
+    # Imagenet100 path: /home/alij/Datasets/Imagenet100/train
+    parser.add_argument('--data_path', default='/home/alij/Datasets/Imagenet100/train', type=str,
         help='Please specify path to the ImageNet training data.')
-    parser.add_argument('--output_dir', default="./checkpoints/mean_patch16_out1000_tiny_fp32", type=str, help='Path to save logs and checkpoints.')
+    parser.add_argument('--output_dir', default="./checkpoints_Imagenet100/mean_patch16_out1000_tiny_fp32", type=str, help='Path to save logs and checkpoints.')
     parser.add_argument('--saveckp_freq', default=20, type=int, help='Save checkpoint every x epochs.')
     parser.add_argument('--seed', default=0, type=int, help='Random seed.')
     parser.add_argument('--num_workers', default=20, type=int, help='Number of data loading workers per GPU.')
