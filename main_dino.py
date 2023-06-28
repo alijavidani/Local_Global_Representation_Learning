@@ -39,6 +39,11 @@ import math
 os.environ["PL_TORCH_DISTRIBUTED_BACKEND"] = "nccl"
 os.environ["CUDA_VISIBLE_DEVICES"]="0,1,3"
 
+def save_arguments_to_json(args, filename):
+    arguments = vars(args)  # Get the arguments as a dictionary
+    with open(filename, 'w') as f:
+        json.dump(arguments, f, indent=4)
+
 torchvision_archs = sorted(name for name in torchvision_models.__dict__
     if name.islower() and not name.startswith("__")
     and callable(torchvision_models.__dict__[name]))
@@ -47,17 +52,17 @@ def get_args_parser():
     parser = argparse.ArgumentParser('DINO', add_help=False)
 
     # Model parameters
-    parser.add_argument('--arch', default='vit_tiny', type=str,
+    arch = parser.add_argument('--arch', default='vit_tiny', type=str,
         choices=['vit_tiny', 'vit_small', 'vit_base', 'xcit', 'deit_tiny', 'deit_small'] \
                 + torchvision_archs + torch.hub.list("facebookresearch/xcit:main"),
         help="""Name of architecture to train. For quick experiments with ViTs,
         we recommend using vit_tiny or vit_small.""")
-    parser.add_argument('--patch_size', default=16, type=int, help="""Size in pixels
+    patch_size = parser.add_argument('--patch_size', default=16, type=int, help="""Size in pixels
         of input square patches - default 16 (for 16x16 patches). Using smaller
         values leads to better performance but requires more memory. Applies only
         for ViTs (vit_tiny, vit_small and vit_base). If <16, we recommend disabling
         mixed precision training (--use_fp16 false) to avoid unstabilities.""") #################
-    parser.add_argument('--out_dim', default=1000, type=int, help="""Dimensionality of
+    out_dim = parser.add_argument('--out_dim', default=1000, type=int, help="""Dimensionality of
         the DINO head output. For complex and large datasets large values (like 65k) work well.""")
     parser.add_argument('--norm_last_layer', default=True, type=utils.bool_flag,
         help="""Whether or not to weight normalize the last layer of the DINO head.
@@ -80,7 +85,7 @@ def get_args_parser():
         help='Number of warmup epochs for the teacher temperature (Default: 30).')
 
     # Training/Optimization parameters
-    parser.add_argument('--use_fp16', type=utils.bool_flag, default=True, help="""Whether or not
+    fp16 = parser.add_argument('--use_fp16', type=utils.bool_flag, default=True, help="""Whether or not
         to use half precision for training. Improves training time and memory requirements,
         but can provoke instability and slight decay of performance. We recommend disabling
         mixed precision if the loss is unstable, if reducing the patch size or if training with bigger ViTs.""")
@@ -92,8 +97,8 @@ def get_args_parser():
     parser.add_argument('--clip_grad', type=float, default=3.0, help="""Maximal parameter
         gradient norm if using gradient clipping. Clipping with norm .3 ~ 1.0 can
         help optimization for larger ViT architectures. 0 for disabling.""")
-    parser.add_argument('--batch_size_per_gpu', default=90, type=int,
-        help='Per-GPU batch-size : number of distinct images loaded on one GPU.')
+    batch_size = parser.add_argument('--batch_size_per_gpu', default=130, type=int,
+        help='Per-GPU batch-size : number of distinct images loaded on one GPU.')######################
     parser.add_argument('--epochs', default=100, type=int, help='Number of epochs of training.')
     parser.add_argument('--freeze_last_layer', default=1, type=int, help="""Number of epochs
         during which we keep the output layer fixed. Typically doing so during
@@ -123,14 +128,15 @@ def get_args_parser():
 
     # Misc
     # ImageNet path: /amin/imagenet/imagenet/train
-    # Cifar10 path:/home/alij/Datasets/Cifar10/pixel_data_label_train
+    # Cifar10 path:/home/alij/Datasets/Cifar10/train
     # Imagenet100 path: /home/alij/Datasets/Imagenet100/train
-    parser.add_argument('--data_path', default='/home/alij/Datasets/Imagenet100/train', type=str,
+
+    parser.add_argument('--data_path', default='/home/alij/Datasets/Cifar10/train', type=str,
         help='Please specify path to the ImageNet training data.')
-    parser.add_argument('--output_dir', default="./checkpoints_Imagenet100/mean_patch16_out1000_tiny_fp32", type=str, help='Path to save logs and checkpoints.')
+    parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/lambda0.9_patch{patch_size.default}_out{out_dim.default}_{arch.default[4:]}_fp{16 if fp16.default else 32}_batch{batch_size.default}_ours", type=str, help='Path to save logs and checkpoints.')
     parser.add_argument('--saveckp_freq', default=20, type=int, help='Save checkpoint every x epochs.')
     parser.add_argument('--seed', default=0, type=int, help='Random seed.')
-    parser.add_argument('--num_workers', default=20, type=int, help='Number of data loading workers per GPU.')
+    parser.add_argument('--num_workers', default=4, type=int, help='Number of data loading workers per GPU.')
     parser.add_argument("--dist_url", default="env://", type=str, help="""url used to set up
         distributed training; see https://pytorch.org/docs/stable/distributed.html""")
     parser.add_argument("--local_rank", default=0, type=int, help="Please ignore and do not set this argument.")
@@ -434,7 +440,7 @@ class DINOLoss(nn.Module):
         total_loss_mean = 0
         total_loss_sum = 0
         n_loss_terms = 0
-        lamda = 0.7
+        lamda = 0.9
 
         for iq, q in enumerate(teacher_out):
             for v in range(len(student_out)):
@@ -458,12 +464,12 @@ class DINOLoss(nn.Module):
                     loss_sum = torch.sum(cross_entropy_loss, dim=-1)
                     # step_loss = loss_sum.sum()
 
-                    total_loss_mean += loss_sum.mean()
-                    total_loss_sum += loss_sum.mean()
-                    n_loss_terms += 1
+                    # total_loss_mean += loss_sum.mean()
+                    # total_loss_sum += loss_sum.mean()
+                    # n_loss_terms += 1
 
                     #Method3 loss function (mean):
-                    total_loss_sum += loss_sum.mean()
+                    # total_loss_sum += loss_sum.sum()
 
                     #Method2 loss function:
                     # if len(loss_sum) == 1:
@@ -472,9 +478,9 @@ class DINOLoss(nn.Module):
                     #     total_loss_sum += lamda * loss_sum[0] * (len(loss_sum)-1) + (1-lamda)*(loss_sum[1:].sum())
 
                     #Method1 loss function:
-                    # total_loss_sum += lamda * loss_sum[0] 
-                    # if len(loss_sum) > 1:
-                    #     total_loss_sum += (1-lamda)*(loss_sum[1:].mean())
+                    total_loss_sum += lamda * loss_sum[0] 
+                    if len(loss_sum) > 1:
+                        total_loss_sum += (1-lamda)*(loss_sum[1:].mean())
                    
                     n_loss_terms += 1
         total_loss = total_loss_sum / n_loss_terms
@@ -560,4 +566,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser('DINO', parents=[get_args_parser()])
     args = parser.parse_args()
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+    # Save the arguments to a JSON file
+    save_arguments_to_json(args, os.path.join(args.output_dir,'arguments.json'))
     train_dino(args)
