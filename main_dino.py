@@ -121,6 +121,7 @@ def DataAugmentationDINO(args, image, seed):
 #         labels.append(data[i][1])
 #     return augmented_crops, labels
 
+@profile
 def collate_function(batch, additional_arg):
     process_seed = random.randint(0, 1000000)
 
@@ -135,12 +136,37 @@ def collate_function(batch, additional_arg):
 
     # show_images(augmented_samples, additional_arg.batch_size_per_gpu)
     
-    # Return the augmented samples and targets as a batch
-    return augmented_samples, targets
+    # Decompose data:
+    images =[
+        torch.empty((len(augmented_samples),3,args.global_scale,args.global_scale)),torch.empty((len(augmented_samples),3,args.global_scale,args.global_scale)),
+        torch.empty((len(augmented_samples),3,args.local_scale,args.local_scale)),torch.empty((len(augmented_samples),3,args.local_scale,args.local_scale)),
+        torch.empty((len(augmented_samples),3,args.local_scale,args.local_scale)),torch.empty((len(augmented_samples),3,args.local_scale,args.local_scale)),
+        torch.empty((len(augmented_samples),3,args.local_scale,args.local_scale)),torch.empty((len(augmented_samples),3,args.local_scale,args.local_scale)),
+        torch.empty((len(augmented_samples),3,args.local_scale,args.local_scale)),torch.empty((len(augmented_samples),3,args.local_scale,args.local_scale)),
+    ]
+    for i in range(len(augmented_samples[0])):
+        for j in range(len(augmented_samples)):
+            images[i][j] = augmented_samples[j][i].crop_tensor_normed.detach().clone()
+
+    corrs = [[None for _ in range(additional_arg.global_crops_number + additional_arg.local_crops_number)] for _ in range(additional_arg.global_crops_number)]
+
+    # Calculate patch correspondences for the last image in the batch
+    # which is also equal to other images in the batch:
+
+    for iq in range(additional_arg.global_crops_number):
+        for v in range(additional_arg.global_crops_number + additional_arg.local_crops_number):
+            if v == iq:
+                # we skip cases where student and teacher operate on the same view
+                continue
+
+            corrs[iq][v] = correspondences(augmented_sample[iq], augmented_sample[v])
+    
+    # Return the augmented samples, correspondences, and targets as a batch
+    return images, corrs, targets
 
 
 os.environ["PL_TORCH_DISTRIBUTED_BACKEND"] = "nccl"
-os.environ["CUDA_VISIBLE_DEVICES"]="0,1,2,3"
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
 def save_arguments_to_json(args, filename):
     arguments = vars(args)  # Get the arguments as a dictionary
@@ -200,9 +226,9 @@ def get_args_parser():
     parser.add_argument('--clip_grad', type=float, default=3.0, help="""Maximal parameter
         gradient norm if using gradient clipping. Clipping with norm .3 ~ 1.0 can
         help optimization for larger ViT architectures. 0 for disabling.""")
-    batch_size = parser.add_argument('--batch_size_per_gpu', default=10, type=int,
+    batch_size = parser.add_argument('--batch_size_per_gpu', default=40, type=int,
         help='Per-GPU batch-size : number of distinct images loaded on one GPU.')######################
-    parser.add_argument('--epochs', default=100, type=int, help='Number of epochs of training.')
+    parser.add_argument('--epochs', default=104, type=int, help='Number of epochs of training.')
     parser.add_argument('--freeze_last_layer', default=1, type=int, help="""Number of epochs
         during which we keep the output layer fixed. Typically doing so during
         the first epoch helps training. Try increasing this value if the loss does not decrease.""")
@@ -218,6 +244,8 @@ def get_args_parser():
     parser.add_argument('--drop_path_rate', type=float, default=0.1, help="stochastic depth rate")
 
     # Multi-crop parameters
+    parser.add_argument('--global_crops_number', type=int, default=2, help="""Number of big
+        global views to generate.""")
     parser.add_argument('--global_crops_scale', type=float, nargs='+', default=(0.4, 1.),
         help="""Scale range of the cropped image before resizing, relatively to the origin image.
         Used for large global view cropping. When disabling multi-crop (--local_crops_number 0), we
@@ -236,7 +264,8 @@ def get_args_parser():
 
     parser.add_argument('--data_path', default='/home/alij/Datasets/Cifar10/train', type=str,
         help='Please specify path to the ImageNet training data.')
-    parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/mean_patch{patch_size.default}_out{out_dim.default}_{arch.default[4:]}_fp{16 if fp16.default else 32}_batch{batch_size.default}_ours_same_batch_augmentation_shortened", type=str, help='Path to save logs and checkpoints.')
+    # parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/mean_patch{patch_size.default}_out{out_dim.default}_{arch.default[4:]}_fp{16 if fp16.default else 32}_batch{batch_size.default}_ours_same_batch_augmentation_on_cpu", type=str, help='Path to save logs and checkpoints.')
+    parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/ali_batch40_on_cpu", type=str, help='Path to save logs and checkpoints.')
     parser.add_argument('--saveckp_freq', default=20, type=int, help='Save checkpoint every x epochs.')
     parser.add_argument('--seed', default=0, type=int, help='Random seed.')
     parser.add_argument('--num_workers', default=4, type=int, help='Number of data loading workers per GPU.')
@@ -419,13 +448,13 @@ def train_dino(args):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
 
-
+# @profile
 def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loader,
                     optimizer, lr_schedule, wd_schedule, momentum_schedule,epoch,
                     fp16_scaler, args):
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Epoch: [{}/{}]'.format(epoch, args.epochs)
-    for it, (data, _) in enumerate(metric_logger.log_every(data_loader, 10, header)):
+    for it, (images, corrs, _) in enumerate(metric_logger.log_every(data_loader, 10, header)):
         # show_batch_images(data, args.batch_size_per_gpu)
 
         # update weight decay and learning rate according to their schedule
@@ -435,21 +464,17 @@ def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loade
             if i == 0:  # only the first group is regularized
                 param_group["weight_decay"] = wd_schedule[it]
 
-        # Decompose data:
-        images =[
-            torch.empty((len(data),3,args.global_scale,args.global_scale)),torch.empty((len(data),3,args.global_scale,args.global_scale)),
-            torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
-            torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
-            torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
-            torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
-        ]
-        for i in range(len(data[0])):
-            for j in range(len(data)):
-                images[i][j] = data[j][i].crop_tensor_normed.detach().clone()
-
-        # images = [d[0] for d in data]
-        # images_coordinates = [d[1][0] for d in data]
-        # images_flips = [d[1][1][0] for d in data]
+        # # Decompose data:
+        # images =[
+        #     torch.empty((len(data),3,args.global_scale,args.global_scale)),torch.empty((len(data),3,args.global_scale,args.global_scale)),
+        #     torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
+        #     torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
+        #     torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
+        #     torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
+        # ]
+        # for i in range(len(data[0])):
+        #     for j in range(len(data)):
+        #         images[i][j] = data[j][i].crop_tensor_normed.detach().clone()
 
         # move images to gpu
         images = [im.cuda(non_blocking=True) for im in images]
@@ -457,7 +482,7 @@ def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loade
         with torch.cuda.amp.autocast(fp16_scaler is not None):
             teacher_output = teacher(images[:2], args.batch_size_per_gpu, args.local_crops_number, args.patch_size, args.global_scale, args.local_scale)  # only the 2 global views pass through the teacher
             student_output = student(images, args.batch_size_per_gpu, args.local_crops_number, args.patch_size, args.global_scale, args.local_scale)
-            loss = dino_loss(student_output, teacher_output, data, epoch)
+            loss = dino_loss(student_output, teacher_output, corrs, epoch)
 
         if not math.isfinite(loss.item()):
             print("Loss is {}, stopping training".format(loss.item()), force=True)
@@ -517,7 +542,7 @@ class DINOLoss(nn.Module):
             np.ones(nepochs - warmup_teacher_temp_epochs) * teacher_temp
         ))
 
-    def forward(self, student_output, teacher_output, data, epoch):
+    def forward(self, student_output, teacher_output, corrs, epoch):
         """
         Cross-entropy between softmax outputs of the teacher and student networks.
         """
@@ -541,12 +566,12 @@ class DINOLoss(nn.Module):
                     # we skip cases where student and teacher operate on the same view
                     continue
                 
-                # Calculate patch correspondences for the first image in the batch
-                # which is also equal to other images in the batch:
-                corr = correspondences(data[0][iq], data[0][v])
+                # # Calculate patch correspondences for the first image in the batch
+                # # which is also equal to other images in the batch:
+                # corr = correspondences(data[0][iq], data[0][v])
 
-                tensor1 = teacher_out[iq][:, corr.selected_crop1_patches, :]
-                tensor2 = student_out[v][:, corr.selected_crop2_patches, :]
+                tensor1 = teacher_out[iq][:, corrs[iq][v].selected_crop1_patches, :]
+                tensor2 = student_out[v][:, corrs[iq][v].selected_crop2_patches, :]
 
                 # print('iq=', iq, 'v=', v, 'k=', k)
                 # print(corr.selected_crop1_patches)
