@@ -140,7 +140,7 @@ def collate_function(batch, additional_arg):
 
 
 os.environ["PL_TORCH_DISTRIBUTED_BACKEND"] = "nccl"
-os.environ["CUDA_VISIBLE_DEVICES"]="0,1,2,3"
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
 def save_arguments_to_json(args, filename):
     arguments = vars(args)  # Get the arguments as a dictionary
@@ -200,9 +200,9 @@ def get_args_parser():
     parser.add_argument('--clip_grad', type=float, default=3.0, help="""Maximal parameter
         gradient norm if using gradient clipping. Clipping with norm .3 ~ 1.0 can
         help optimization for larger ViT architectures. 0 for disabling.""")
-    batch_size = parser.add_argument('--batch_size_per_gpu', default=10, type=int,
+    batch_size = parser.add_argument('--batch_size_per_gpu', default=40, type=int,
         help='Per-GPU batch-size : number of distinct images loaded on one GPU.')######################
-    parser.add_argument('--epochs', default=100, type=int, help='Number of epochs of training.')
+    parser.add_argument('--epochs', default=101, type=int, help='Number of epochs of training.')
     parser.add_argument('--freeze_last_layer', default=1, type=int, help="""Number of epochs
         during which we keep the output layer fixed. Typically doing so during
         the first epoch helps training. Try increasing this value if the loss does not decrease.""")
@@ -236,7 +236,8 @@ def get_args_parser():
 
     parser.add_argument('--data_path', default='/home/alij/Datasets/Cifar10/train', type=str,
         help='Please specify path to the ImageNet training data.')
-    parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/mean_patch{patch_size.default}_out{out_dim.default}_{arch.default[4:]}_fp{16 if fp16.default else 32}_batch{batch_size.default}_ours_same_batch_augmentation_shortened", type=str, help='Path to save logs and checkpoints.')
+    # parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/mean_patch{patch_size.default}_out{out_dim.default}_{arch.default[4:]}_fp{16 if fp16.default else 32}_batch{batch_size.default}_ours_same_batch_augmentation_shortened", type=str, help='Path to save logs and checkpoints.')
+    parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/ali_batch40_on_gpu", type=str, help='Path to save logs and checkpoints.')
     parser.add_argument('--saveckp_freq', default=20, type=int, help='Save checkpoint every x epochs.')
     parser.add_argument('--seed', default=0, type=int, help='Random seed.')
     parser.add_argument('--num_workers', default=4, type=int, help='Number of data loading workers per GPU.')
@@ -419,7 +420,7 @@ def train_dino(args):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
 
-
+@profile
 def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loader,
                     optimizer, lr_schedule, wd_schedule, momentum_schedule,epoch,
                     fp16_scaler, args):
