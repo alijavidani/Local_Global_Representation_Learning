@@ -1,0 +1,269 @@
+Will run the code on one GPU.
+| distributed init (rank 0): env://
+git:
+  sha: f51012dbf3a788b02899ad06fdaf2e8d5fec1864, status: has uncommited changes, branch: QCRI_Cifar10_same_batch_augmentation_correspondence_on_GPU
+
+arch: vit_tiny
+batch_size_per_gpu: 40
+clip_grad: 3.0
+data_path: /home/alij/Datasets/Cifar10/train
+dist_url: env://
+drop_path_rate: 0.1
+epochs: 103
+freeze_last_layer: 1
+global_crops_scale: (0.4, 1.0)
+global_scale: 224
+gpu: 0
+local_crops_number: 8
+local_crops_scale: (0.05, 0.4)
+local_rank: 0
+local_scale: 96
+lr: 0.0005
+min_lr: 1e-06
+momentum_teacher: 0.996
+norm_last_layer: True
+num_workers: 8
+optimizer: adamw
+out_dim: 1000
+output_dir: /home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/ali_batch40_on_gpu
+patch_size: 16
+rank: 0
+saveckp_freq: 20
+seed: 0
+teacher_temp: 0.04
+use_bn_in_head: False
+use_fp16: True
+warmup_epochs: 10
+warmup_teacher_temp: 0.04
+warmup_teacher_temp_epochs: 0
+weight_decay: 0.04
+weight_decay_end: 0.4
+world_size: 1
+Data loaded: there are 50000 images.
+Student and Teacher are built: they are both vit_tiny network.
+Loss, optimizer and schedulers ready.
+Found checkpoint at /home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/ali_batch40_on_gpu/checkpoint.pth
+=> loaded 'student' from checkpoint '/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/ali_batch40_on_gpu/checkpoint.pth' with msg <All keys matched successfully>
+=> loaded 'teacher' from checkpoint '/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/ali_batch40_on_gpu/checkpoint.pth' with msg <All keys matched successfully>
+=> loaded 'optimizer' from checkpoint: '/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/ali_batch40_on_gpu/checkpoint.pth'
+=> loaded 'fp16_scaler' from checkpoint: '/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/ali_batch40_on_gpu/checkpoint.pth'
+=> loaded 'dino_loss' from checkpoint '/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/ali_batch40_on_gpu/checkpoint.pth' with msg <All keys matched successfully>
+Starting DINO training !
+Epoch: [102/103]  [   0/1250]  eta: 1:52:14  loss: 2.913071 (2.913071)  lr: 0.000001 (0.000001)  wd: 0.399916 (0.399916)  time: 5.387551  data: 3.188427  max mem: 5312
+Epoch: [102/103]  [  10/1250]  eta: 0:18:32  loss: 2.495383 (2.544341)  lr: 0.000001 (0.000001)  wd: 0.399917 (0.399917)  time: 0.897299  data: 0.290066  max mem: 5405
+Epoch: [102/103]  [  20/1250]  eta: 0:13:28  loss: 2.447503 (2.527543)  lr: 0.000001 (0.000001)  wd: 0.399918 (0.399918)  time: 0.421132  data: 0.000229  max mem: 5413
+Epoch: [102/103]  [  30/1250]  eta: 0:11:39  loss: 2.466970 (2.572694)  lr: 0.000001 (0.000001)  wd: 0.399919 (0.399918)  time: 0.395127  data: 0.000237  max mem: 5420
+Epoch: [102/103]  [  40/1250]  eta: 0:10:30  loss: 2.481809 (2.571905)  lr: 0.000001 (0.000001)  wd: 0.399920 (0.399919)  time: 0.377728  data: 0.000242  max mem: 5420
+Epoch: [102/103]  [  50/1250]  eta: 0:10:00  loss: 2.493100 (2.557777)  lr: 0.000001 (0.000001)  wd: 0.399922 (0.399920)  time: 0.387781  data: 0.000227  max mem: 5420
+Epoch: [102/103]  [  60/1250]  eta: 0:09:31  loss: 2.493100 (2.541417)  lr: 0.000001 (0.000001)  wd: 0.399923 (0.399920)  time: 0.397435  data: 0.000254  max mem: 5420
+Epoch: [102/103]  [  70/1250]  eta: 0:09:10  loss: 2.520225 (2.556871)  lr: 0.000001 (0.000001)  wd: 0.399924 (0.399921)  time: 0.380729  data: 0.000261  max mem: 5420
+Epoch: [102/103]  [  80/1250]  eta: 0:08:52  loss: 2.564910 (2.559307)  lr: 0.000001 (0.000001)  wd: 0.399925 (0.399922)  time: 0.378290  data: 0.000211  max mem: 5420
+Epoch: [102/103]  [  90/1250]  eta: 0:08:39  loss: 2.516260 (2.564442)  lr: 0.000001 (0.000001)  wd: 0.399927 (0.399922)  time: 0.381218  data: 0.000230  max mem: 5420
+Epoch: [102/103]  [ 100/1250]  eta: 0:08:26  loss: 2.576785 (2.571457)  lr: 0.000001 (0.000001)  wd: 0.399928 (0.399923)  time: 0.379604  data: 0.000260  max mem: 5430
+Epoch: [102/103]  [ 110/1250]  eta: 0:08:18  loss: 2.639966 (2.578723)  lr: 0.000001 (0.000001)  wd: 0.399929 (0.399923)  time: 0.386538  data: 0.000229  max mem: 5430
+Epoch: [102/103]  [ 120/1250]  eta: 0:08:08  loss: 2.488892 (2.572078)  lr: 0.000001 (0.000001)  wd: 0.399930 (0.399924)  time: 0.393517  data: 0.000214  max mem: 5436
+Epoch: [102/103]  [ 130/1250]  eta: 0:08:02  loss: 2.471504 (2.578639)  lr: 0.000001 (0.000001)  wd: 0.399932 (0.399925)  time: 0.394171  data: 0.000237  max mem: 5436
+Epoch: [102/103]  [ 140/1250]  eta: 0:07:53  loss: 2.622222 (2.596257)  lr: 0.000001 (0.000001)  wd: 0.399933 (0.399925)  time: 0.390835  data: 0.000243  max mem: 5436
+Epoch: [102/103]  [ 150/1250]  eta: 0:07:45  loss: 2.682776 (2.603717)  lr: 0.000001 (0.000001)  wd: 0.399934 (0.399926)  time: 0.378661  data: 0.000225  max mem: 5436
+Epoch: [102/103]  [ 160/1250]  eta: 0:07:37  loss: 2.716638 (2.611287)  lr: 0.000001 (0.000001)  wd: 0.399935 (0.399927)  time: 0.372992  data: 0.000230  max mem: 5436
+Epoch: [102/103]  [ 170/1250]  eta: 0:07:32  loss: 2.663474 (2.611973)  lr: 0.000001 (0.000001)  wd: 0.399936 (0.399927)  time: 0.383587  data: 0.000271  max mem: 5436
+Epoch: [102/103]  [ 180/1250]  eta: 0:07:25  loss: 2.557697 (2.609307)  lr: 0.000001 (0.000001)  wd: 0.399938 (0.399928)  time: 0.389966  data: 0.000260  max mem: 5436
+Epoch: [102/103]  [ 190/1250]  eta: 0:07:21  loss: 2.480705 (2.605206)  lr: 0.000001 (0.000001)  wd: 0.399939 (0.399928)  time: 0.397819  data: 0.000231  max mem: 5436
+Epoch: [102/103]  [ 200/1250]  eta: 0:07:16  loss: 2.480404 (2.600420)  lr: 0.000001 (0.000001)  wd: 0.399940 (0.399929)  time: 0.405540  data: 0.000245  max mem: 5436
+Epoch: [102/103]  [ 210/1250]  eta: 0:07:11  loss: 2.480404 (2.600317)  lr: 0.000001 (0.000001)  wd: 0.399941 (0.399930)  time: 0.399266  data: 0.000236  max mem: 5436
+Epoch: [102/103]  [ 220/1250]  eta: 0:07:05  loss: 2.572577 (2.597965)  lr: 0.000001 (0.000001)  wd: 0.399942 (0.399930)  time: 0.393325  data: 0.000225  max mem: 5436
+Epoch: [102/103]  [ 230/1250]  eta: 0:07:01  loss: 2.551713 (2.597222)  lr: 0.000001 (0.000001)  wd: 0.399943 (0.399931)  time: 0.396788  data: 0.000218  max mem: 5436
+Epoch: [102/103]  [ 240/1250]  eta: 0:06:55  loss: 2.551713 (2.599175)  lr: 0.000001 (0.000001)  wd: 0.399944 (0.399931)  time: 0.392016  data: 0.000222  max mem: 5436
+Epoch: [102/103]  [ 250/1250]  eta: 0:06:50  loss: 2.530434 (2.597401)  lr: 0.000001 (0.000001)  wd: 0.399945 (0.399932)  time: 0.381875  data: 0.000235  max mem: 5436
+Epoch: [102/103]  [ 260/1250]  eta: 0:06:44  loss: 2.439300 (2.593391)  lr: 0.000001 (0.000001)  wd: 0.399946 (0.399932)  time: 0.372469  data: 0.000233  max mem: 5436
+Epoch: [102/103]  [ 270/1250]  eta: 0:06:40  loss: 2.503433 (2.592643)  lr: 0.000001 (0.000001)  wd: 0.399947 (0.399933)  time: 0.379987  data: 0.000425  max mem: 5436
+Epoch: [102/103]  [ 280/1250]  eta: 0:06:35  loss: 2.503433 (2.586448)  lr: 0.000001 (0.000001)  wd: 0.399949 (0.399934)  time: 0.391494  data: 0.000419  max mem: 5436
+Epoch: [102/103]  [ 290/1250]  eta: 0:06:30  loss: 2.507494 (2.585085)  lr: 0.000001 (0.000001)  wd: 0.399950 (0.399934)  time: 0.380332  data: 0.000224  max mem: 5436
+Epoch: [102/103]  [ 300/1250]  eta: 0:06:25  loss: 2.430593 (2.586649)  lr: 0.000001 (0.000001)  wd: 0.399951 (0.399935)  time: 0.375425  data: 0.000235  max mem: 5436
+Epoch: [102/103]  [ 310/1250]  eta: 0:06:20  loss: 2.773254 (2.598680)  lr: 0.000001 (0.000001)  wd: 0.399952 (0.399935)  time: 0.379387  data: 0.000244  max mem: 5436
+Epoch: [102/103]  [ 320/1250]  eta: 0:06:16  loss: 2.773254 (2.598321)  lr: 0.000001 (0.000001)  wd: 0.399953 (0.399936)  time: 0.395945  data: 0.000242  max mem: 5436
+Epoch: [102/103]  [ 330/1250]  eta: 0:06:11  loss: 2.447578 (2.596985)  lr: 0.000001 (0.000001)  wd: 0.399954 (0.399936)  time: 0.395167  data: 0.000246  max mem: 5436
+Epoch: [102/103]  [ 340/1250]  eta: 0:06:07  loss: 2.547593 (2.596067)  lr: 0.000001 (0.000001)  wd: 0.399955 (0.399937)  time: 0.393863  data: 0.000238  max mem: 5436
+Epoch: [102/103]  [ 350/1250]  eta: 0:06:02  loss: 2.409445 (2.589198)  lr: 0.000001 (0.000001)  wd: 0.399956 (0.399938)  time: 0.386259  data: 0.000236  max mem: 5436
+Epoch: [102/103]  [ 360/1250]  eta: 0:05:58  loss: 2.424081 (2.587856)  lr: 0.000001 (0.000001)  wd: 0.399957 (0.399938)  time: 0.380140  data: 0.000250  max mem: 5436
+Epoch: [102/103]  [ 370/1250]  eta: 0:05:53  loss: 2.689100 (2.594389)  lr: 0.000001 (0.000001)  wd: 0.399958 (0.399939)  time: 0.379192  data: 0.000259  max mem: 5436
+Epoch: [102/103]  [ 380/1250]  eta: 0:05:49  loss: 2.712159 (2.598798)  lr: 0.000001 (0.000001)  wd: 0.399959 (0.399939)  time: 0.385572  data: 0.000245  max mem: 5436
+Epoch: [102/103]  [ 390/1250]  eta: 0:05:45  loss: 2.543668 (2.596623)  lr: 0.000001 (0.000001)  wd: 0.399959 (0.399940)  time: 0.395695  data: 0.000263  max mem: 5436
+Epoch: [102/103]  [ 400/1250]  eta: 0:05:41  loss: 2.474025 (2.598574)  lr: 0.000001 (0.000001)  wd: 0.399960 (0.399940)  time: 0.407527  data: 0.000262  max mem: 5436
+Epoch: [102/103]  [ 410/1250]  eta: 0:05:37  loss: 2.624891 (2.600815)  lr: 0.000001 (0.000001)  wd: 0.399961 (0.399941)  time: 0.410850  data: 0.000224  max mem: 5436
+Epoch: [102/103]  [ 420/1250]  eta: 0:05:33  loss: 2.656162 (2.604192)  lr: 0.000001 (0.000001)  wd: 0.399962 (0.399941)  time: 0.386285  data: 0.000251  max mem: 5436
+Epoch: [102/103]  [ 430/1250]  eta: 0:05:28  loss: 2.612247 (2.606309)  lr: 0.000001 (0.000001)  wd: 0.399963 (0.399942)  time: 0.379904  data: 0.000262  max mem: 5436
+Epoch: [102/103]  [ 440/1250]  eta: 0:05:24  loss: 2.520215 (2.609875)  lr: 0.000001 (0.000001)  wd: 0.399964 (0.399942)  time: 0.390033  data: 0.000244  max mem: 5436
+Epoch: [102/103]  [ 450/1250]  eta: 0:05:20  loss: 2.514297 (2.608222)  lr: 0.000001 (0.000001)  wd: 0.399965 (0.399943)  time: 0.378374  data: 0.000222  max mem: 5436
+Epoch: [102/103]  [ 460/1250]  eta: 0:05:15  loss: 2.509247 (2.607430)  lr: 0.000001 (0.000001)  wd: 0.399966 (0.399943)  time: 0.378798  data: 0.000236  max mem: 5436
+Epoch: [102/103]  [ 470/1250]  eta: 0:05:11  loss: 2.475169 (2.604830)  lr: 0.000001 (0.000001)  wd: 0.399967 (0.399944)  time: 0.379132  data: 0.000256  max mem: 5436
+Epoch: [102/103]  [ 480/1250]  eta: 0:05:07  loss: 2.510806 (2.610541)  lr: 0.000001 (0.000001)  wd: 0.399967 (0.399944)  time: 0.382796  data: 0.000254  max mem: 5436
+Epoch: [102/103]  [ 490/1250]  eta: 0:05:03  loss: 2.687288 (2.613836)  lr: 0.000001 (0.000001)  wd: 0.399968 (0.399945)  time: 0.412460  data: 0.000289  max mem: 5436
+Epoch: [102/103]  [ 500/1250]  eta: 0:04:59  loss: 2.608288 (2.613154)  lr: 0.000001 (0.000001)  wd: 0.399969 (0.399945)  time: 0.395333  data: 0.000276  max mem: 5436
+Epoch: [102/103]  [ 510/1250]  eta: 0:04:54  loss: 2.513715 (2.613492)  lr: 0.000001 (0.000001)  wd: 0.399970 (0.399946)  time: 0.368764  data: 0.000205  max mem: 5436
+Epoch: [102/103]  [ 520/1250]  eta: 0:04:50  loss: 2.612682 (2.614329)  lr: 0.000001 (0.000001)  wd: 0.399971 (0.399946)  time: 0.382960  data: 0.000284  max mem: 5436
+Epoch: [102/103]  [ 530/1250]  eta: 0:04:46  loss: 2.719969 (2.614638)  lr: 0.000001 (0.000001)  wd: 0.399971 (0.399947)  time: 0.387391  data: 0.000314  max mem: 5436
+Epoch: [102/103]  [ 540/1250]  eta: 0:04:42  loss: 2.506798 (2.613707)  lr: 0.000001 (0.000001)  wd: 0.399972 (0.399947)  time: 0.391973  data: 0.000227  max mem: 5436
+Epoch: [102/103]  [ 550/1250]  eta: 0:04:38  loss: 2.561856 (2.617398)  lr: 0.000001 (0.000001)  wd: 0.399973 (0.399948)  time: 0.394861  data: 0.000230  max mem: 5436
+Epoch: [102/103]  [ 560/1250]  eta: 0:04:34  loss: 2.509579 (2.614235)  lr: 0.000001 (0.000001)  wd: 0.399974 (0.399948)  time: 0.400731  data: 0.000270  max mem: 5436
+Epoch: [102/103]  [ 570/1250]  eta: 0:04:30  loss: 2.341970 (2.610382)  lr: 0.000001 (0.000001)  wd: 0.399974 (0.399949)  time: 0.385514  data: 0.000288  max mem: 5436
+Epoch: [102/103]  [ 580/1250]  eta: 0:04:26  loss: 2.509881 (2.611810)  lr: 0.000001 (0.000001)  wd: 0.399975 (0.399949)  time: 0.379325  data: 0.000288  max mem: 5436
+Epoch: [102/103]  [ 590/1250]  eta: 0:04:22  loss: 2.544443 (2.611559)  lr: 0.000001 (0.000001)  wd: 0.399976 (0.399950)  time: 0.385989  data: 0.000263  max mem: 5436
+Epoch: [102/103]  [ 600/1250]  eta: 0:04:18  loss: 2.544443 (2.611649)  lr: 0.000001 (0.000001)  wd: 0.399977 (0.399950)  time: 0.381093  data: 0.000247  max mem: 5436
+Epoch: [102/103]  [ 610/1250]  eta: 0:04:14  loss: 2.534969 (2.612261)  lr: 0.000001 (0.000001)  wd: 0.399977 (0.399950)  time: 0.403937  data: 0.000229  max mem: 5436
+Epoch: [102/103]  [ 620/1250]  eta: 0:04:10  loss: 2.487861 (2.610849)  lr: 0.000001 (0.000001)  wd: 0.399978 (0.399951)  time: 0.394861  data: 0.000219  max mem: 5436
+Epoch: [102/103]  [ 630/1250]  eta: 0:04:06  loss: 2.371719 (2.609678)  lr: 0.000001 (0.000001)  wd: 0.399979 (0.399951)  time: 0.387462  data: 0.000241  max mem: 5436
+Epoch: [102/103]  [ 640/1250]  eta: 0:04:01  loss: 2.388060 (2.609592)  lr: 0.000001 (0.000001)  wd: 0.399979 (0.399952)  time: 0.383780  data: 0.000248  max mem: 5436
+Epoch: [102/103]  [ 650/1250]  eta: 0:03:57  loss: 2.531276 (2.608604)  lr: 0.000001 (0.000001)  wd: 0.399980 (0.399952)  time: 0.382946  data: 0.000256  max mem: 5436
+Epoch: [102/103]  [ 660/1250]  eta: 0:03:53  loss: 2.608380 (2.609313)  lr: 0.000001 (0.000001)  wd: 0.399981 (0.399953)  time: 0.391077  data: 0.000233  max mem: 5436
+Epoch: [102/103]  [ 670/1250]  eta: 0:03:49  loss: 2.636474 (2.610564)  lr: 0.000001 (0.000001)  wd: 0.399981 (0.399953)  time: 0.392292  data: 0.000236  max mem: 5436
+Epoch: [102/103]  [ 680/1250]  eta: 0:03:45  loss: 2.483862 (2.609348)  lr: 0.000001 (0.000001)  wd: 0.399982 (0.399954)  time: 0.388171  data: 0.000267  max mem: 5436
+Epoch: [102/103]  [ 690/1250]  eta: 0:03:42  loss: 2.431302 (2.607110)  lr: 0.000001 (0.000001)  wd: 0.399983 (0.399954)  time: 0.394326  data: 0.000246  max mem: 5436
+Epoch: [102/103]  [ 700/1250]  eta: 0:03:37  loss: 2.454910 (2.607356)  lr: 0.000001 (0.000001)  wd: 0.399983 (0.399954)  time: 0.388579  data: 0.000220  max mem: 5436
+Epoch: [102/103]  [ 710/1250]  eta: 0:03:33  loss: 2.461233 (2.605721)  lr: 0.000001 (0.000001)  wd: 0.399984 (0.399955)  time: 0.384423  data: 0.000227  max mem: 5436
+Epoch: [102/103]  [ 720/1250]  eta: 0:03:29  loss: 2.496537 (2.606849)  lr: 0.000001 (0.000001)  wd: 0.399984 (0.399955)  time: 0.388568  data: 0.000250  max mem: 5436
+Epoch: [102/103]  [ 730/1250]  eta: 0:03:25  loss: 2.424966 (2.602779)  lr: 0.000001 (0.000001)  wd: 0.399985 (0.399956)  time: 0.396623  data: 0.000278  max mem: 5436
+Epoch: [102/103]  [ 740/1250]  eta: 0:03:21  loss: 2.387798 (2.601899)  lr: 0.000001 (0.000001)  wd: 0.399986 (0.399956)  time: 0.396960  data: 0.000260  max mem: 5436
+Epoch: [102/103]  [ 750/1250]  eta: 0:03:18  loss: 2.406424 (2.599887)  lr: 0.000001 (0.000001)  wd: 0.399986 (0.399956)  time: 0.392973  data: 0.000258  max mem: 5436
+Epoch: [102/103]  [ 760/1250]  eta: 0:03:14  loss: 2.503628 (2.600448)  lr: 0.000001 (0.000001)  wd: 0.399987 (0.399957)  time: 0.415551  data: 0.000265  max mem: 5436
+Epoch: [102/103]  [ 770/1250]  eta: 0:03:10  loss: 2.617407 (2.600861)  lr: 0.000001 (0.000001)  wd: 0.399987 (0.399957)  time: 0.395259  data: 0.000268  max mem: 5436
+Epoch: [102/103]  [ 780/1250]  eta: 0:03:05  loss: 2.545109 (2.599584)  lr: 0.000001 (0.000001)  wd: 0.399988 (0.399958)  time: 0.371798  data: 0.000263  max mem: 5436
+Epoch: [102/103]  [ 790/1250]  eta: 0:03:02  loss: 2.545109 (2.601469)  lr: 0.000001 (0.000001)  wd: 0.399988 (0.399958)  time: 0.398614  data: 0.000240  max mem: 5436
+Epoch: [102/103]  [ 800/1250]  eta: 0:02:58  loss: 2.608100 (2.600020)  lr: 0.000001 (0.000001)  wd: 0.399989 (0.399958)  time: 0.414566  data: 0.000272  max mem: 5436
+Epoch: [102/103]  [ 810/1250]  eta: 0:02:54  loss: 2.536351 (2.600665)  lr: 0.000001 (0.000001)  wd: 0.399989 (0.399959)  time: 0.394231  data: 0.000291  max mem: 5436
+Epoch: [102/103]  [ 820/1250]  eta: 0:02:50  loss: 2.584966 (2.599773)  lr: 0.000001 (0.000001)  wd: 0.399990 (0.399959)  time: 0.383298  data: 0.000267  max mem: 5436
+Epoch: [102/103]  [ 830/1250]  eta: 0:02:46  loss: 2.603068 (2.600593)  lr: 0.000001 (0.000001)  wd: 0.399990 (0.399960)  time: 0.374150  data: 0.000244  max mem: 5436
+Epoch: [102/103]  [ 840/1250]  eta: 0:02:42  loss: 2.496948 (2.598368)  lr: 0.000001 (0.000001)  wd: 0.399991 (0.399960)  time: 0.388396  data: 0.000383  max mem: 5436
+Epoch: [102/103]  [ 850/1250]  eta: 0:02:38  loss: 2.497111 (2.597373)  lr: 0.000001 (0.000001)  wd: 0.399991 (0.399960)  time: 0.406835  data: 0.000390  max mem: 5436
+Epoch: [102/103]  [ 860/1250]  eta: 0:02:34  loss: 2.508224 (2.597610)  lr: 0.000001 (0.000001)  wd: 0.399991 (0.399961)  time: 0.400666  data: 0.000232  max mem: 5436
+Epoch: [102/103]  [ 870/1250]  eta: 0:02:30  loss: 2.587697 (2.598726)  lr: 0.000001 (0.000001)  wd: 0.399992 (0.399961)  time: 0.391806  data: 0.000325  max mem: 5436
+Epoch: [102/103]  [ 880/1250]  eta: 0:02:26  loss: 2.596860 (2.598217)  lr: 0.000001 (0.000001)  wd: 0.399992 (0.399961)  time: 0.378009  data: 0.000341  max mem: 5436
+Epoch: [102/103]  [ 890/1250]  eta: 0:02:22  loss: 2.612961 (2.599593)  lr: 0.000001 (0.000001)  wd: 0.399993 (0.399962)  time: 0.383938  data: 0.000255  max mem: 5436
+Epoch: [102/103]  [ 900/1250]  eta: 0:02:18  loss: 2.599778 (2.598705)  lr: 0.000001 (0.000001)  wd: 0.399993 (0.399962)  time: 0.389248  data: 0.000251  max mem: 5436
+Epoch: [102/103]  [ 910/1250]  eta: 0:02:14  loss: 2.581936 (2.601238)  lr: 0.000001 (0.000001)  wd: 0.399993 (0.399962)  time: 0.379884  data: 0.000244  max mem: 5436
+Epoch: [102/103]  [ 920/1250]  eta: 0:02:10  loss: 2.623548 (2.602533)  lr: 0.000001 (0.000001)  wd: 0.399994 (0.399963)  time: 0.382586  data: 0.000251  max mem: 5436
+Epoch: [102/103]  [ 930/1250]  eta: 0:02:06  loss: 2.601154 (2.604634)  lr: 0.000001 (0.000001)  wd: 0.399994 (0.399963)  time: 0.380644  data: 0.000249  max mem: 5436
+Epoch: [102/103]  [ 940/1250]  eta: 0:02:02  loss: 2.601154 (2.605723)  lr: 0.000001 (0.000001)  wd: 0.399995 (0.399963)  time: 0.380801  data: 0.000218  max mem: 5436
+Epoch: [102/103]  [ 950/1250]  eta: 0:01:58  loss: 2.565346 (2.605020)  lr: 0.000001 (0.000001)  wd: 0.399995 (0.399964)  time: 0.387405  data: 0.000240  max mem: 5436
+Epoch: [102/103]  [ 960/1250]  eta: 0:01:54  loss: 2.583416 (2.605634)  lr: 0.000001 (0.000001)  wd: 0.399995 (0.399964)  time: 0.383147  data: 0.000262  max mem: 5436
+Epoch: [102/103]  [ 970/1250]  eta: 0:01:50  loss: 2.583416 (2.605518)  lr: 0.000001 (0.000001)  wd: 0.399995 (0.399964)  time: 0.393525  data: 0.000273  max mem: 5436
+Epoch: [102/103]  [ 980/1250]  eta: 0:01:46  loss: 2.415696 (2.605414)  lr: 0.000001 (0.000001)  wd: 0.399996 (0.399965)  time: 0.410918  data: 0.000297  max mem: 5436
+Epoch: [102/103]  [ 990/1250]  eta: 0:01:42  loss: 2.700162 (2.607047)  lr: 0.000001 (0.000001)  wd: 0.399996 (0.399965)  time: 0.391651  data: 0.000261  max mem: 5436
+Epoch: [102/103]  [1000/1250]  eta: 0:01:38  loss: 2.599281 (2.604834)  lr: 0.000001 (0.000001)  wd: 0.399996 (0.399965)  time: 0.380179  data: 0.000246  max mem: 5436
+Epoch: [102/103]  [1010/1250]  eta: 0:01:34  loss: 2.417910 (2.604505)  lr: 0.000001 (0.000001)  wd: 0.399997 (0.399966)  time: 0.385878  data: 0.000260  max mem: 5436
+Epoch: [102/103]  [1020/1250]  eta: 0:01:30  loss: 2.577389 (2.605087)  lr: 0.000001 (0.000001)  wd: 0.399997 (0.399966)  time: 0.385078  data: 0.000245  max mem: 5436
+Epoch: [102/103]  [1030/1250]  eta: 0:01:26  loss: 2.642543 (2.605892)  lr: 0.000001 (0.000001)  wd: 0.399997 (0.399966)  time: 0.377738  data: 0.000242  max mem: 5436
+Epoch: [102/103]  [1040/1250]  eta: 0:01:22  loss: 2.693367 (2.607067)  lr: 0.000001 (0.000001)  wd: 0.399997 (0.399967)  time: 0.370559  data: 0.000225  max mem: 5436
+Epoch: [102/103]  [1050/1250]  eta: 0:01:18  loss: 2.693714 (2.607424)  lr: 0.000001 (0.000001)  wd: 0.399998 (0.399967)  time: 0.373668  data: 0.000210  max mem: 5436
+Epoch: [102/103]  [1060/1250]  eta: 0:01:14  loss: 2.674487 (2.608233)  lr: 0.000001 (0.000001)  wd: 0.399998 (0.399967)  time: 0.380278  data: 0.000219  max mem: 5436
+Epoch: [102/103]  [1070/1250]  eta: 0:01:10  loss: 2.643585 (2.607414)  lr: 0.000001 (0.000001)  wd: 0.399998 (0.399967)  time: 0.386669  data: 0.000222  max mem: 5436
+Epoch: [102/103]  [1080/1250]  eta: 0:01:06  loss: 2.523697 (2.606706)  lr: 0.000001 (0.000001)  wd: 0.399998 (0.399968)  time: 0.391035  data: 0.000236  max mem: 5436
+Epoch: [102/103]  [1090/1250]  eta: 0:01:02  loss: 2.557334 (2.608244)  lr: 0.000001 (0.000001)  wd: 0.399998 (0.399968)  time: 0.388886  data: 0.000255  max mem: 5436
+Epoch: [102/103]  [1100/1250]  eta: 0:00:59  loss: 2.557334 (2.607686)  lr: 0.000001 (0.000001)  wd: 0.399999 (0.399968)  time: 0.394234  data: 0.000264  max mem: 5436
+Epoch: [102/103]  [1110/1250]  eta: 0:00:55  loss: 2.446924 (2.606377)  lr: 0.000001 (0.000001)  wd: 0.399999 (0.399969)  time: 0.399043  data: 0.000253  max mem: 5436
+Epoch: [102/103]  [1120/1250]  eta: 0:00:51  loss: 2.412283 (2.603840)  lr: 0.000001 (0.000001)  wd: 0.399999 (0.399969)  time: 0.385584  data: 0.000227  max mem: 5436
+Epoch: [102/103]  [1130/1250]  eta: 0:00:47  loss: 2.332285 (2.601961)  lr: 0.000001 (0.000001)  wd: 0.399999 (0.399969)  time: 0.380820  data: 0.000234  max mem: 5436
+Epoch: [102/103]  [1140/1250]  eta: 0:00:43  loss: 2.413920 (2.601203)  lr: 0.000001 (0.000001)  wd: 0.399999 (0.399969)  time: 0.389665  data: 0.000253  max mem: 5436
+Epoch: [102/103]  [1150/1250]  eta: 0:00:39  loss: 2.564768 (2.604289)  lr: 0.000001 (0.000001)  wd: 0.399999 (0.399970)  time: 0.391026  data: 0.000235  max mem: 5436
+Epoch: [102/103]  [1160/1250]  eta: 0:00:35  loss: 2.600613 (2.603532)  lr: 0.000001 (0.000001)  wd: 0.399999 (0.399970)  time: 0.380037  data: 0.000249  max mem: 5436
+Epoch: [102/103]  [1170/1250]  eta: 0:00:31  loss: 2.600613 (2.604990)  lr: 0.000001 (0.000001)  wd: 0.400000 (0.399970)  time: 0.370027  data: 0.000259  max mem: 5436
+Epoch: [102/103]  [1180/1250]  eta: 0:00:27  loss: 2.698891 (2.605197)  lr: 0.000001 (0.000001)  wd: 0.400000 (0.399970)  time: 0.381972  data: 0.000265  max mem: 5436
+Epoch: [102/103]  [1190/1250]  eta: 0:00:23  loss: 2.620202 (2.605561)  lr: 0.000001 (0.000001)  wd: 0.400000 (0.399971)  time: 0.391716  data: 0.000267  max mem: 5436
+Epoch: [102/103]  [1200/1250]  eta: 0:00:19  loss: 2.546855 (2.604687)  lr: 0.000001 (0.000001)  wd: 0.400000 (0.399971)  time: 0.383308  data: 0.000273  max mem: 5436
+Epoch: [102/103]  [1210/1250]  eta: 0:00:15  loss: 2.546855 (2.604096)  lr: 0.000001 (0.000001)  wd: 0.400000 (0.399971)  time: 0.372170  data: 0.000255  max mem: 5436
+Epoch: [102/103]  [1220/1250]  eta: 0:00:11  loss: 2.603784 (2.604812)  lr: 0.000001 (0.000001)  wd: 0.400000 (0.399971)  time: 0.381353  data: 0.000224  max mem: 5436
+Epoch: [102/103]  [1230/1250]  eta: 0:00:07  loss: 2.450406 (2.604583)  lr: 0.000001 (0.000001)  wd: 0.400000 (0.399972)  time: 0.401179  data: 0.000264  max mem: 5436
+Epoch: [102/103]  [1240/1250]  eta: 0:00:03  loss: 2.613909 (2.607180)  lr: 0.000001 (0.000001)  wd: 0.400000 (0.399972)  time: 0.383162  data: 0.000344  max mem: 5436
+Epoch: [102/103]  [1249/1250]  eta: 0:00:00  loss: 2.730954 (2.607757)  lr: 0.000001 (0.000001)  wd: 0.400000 (0.399972)  time: 0.337606  data: 0.000262  max mem: 5436
+Epoch: [102/103] Total time: 0:08:09 (0.391877 s / it)
+Averaged stats: loss: 2.730954 (2.607757)  lr: 0.000001 (0.000001)  wd: 0.400000 (0.399972)
+Training time 0:08:10
+Wrote profile results to main_dino.py.lprof
+Timer unit: 1e-06 s
+
+Total time: 488.992 s
+File: main_dino.py
+Function: train_one_epoch at line 423
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   423                                           @profile
+   424                                           def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loader,
+   425                                                               optimizer, lr_schedule, wd_schedule, momentum_schedule,epoch,
+   426                                                               fp16_scaler, args):
+   427         1         17.4     17.4      0.0      metric_logger = utils.MetricLogger(delimiter="  ")
+   428         1          6.6      6.6      0.0      header = 'Epoch: [{}/{}]'.format(epoch, args.epochs)
+   429      1250   34374587.1  27499.7      7.0      for it, (data, _) in enumerate(metric_logger.log_every(data_loader, 10, header)):
+   430                                                   # show_batch_images(data, args.batch_size_per_gpu)
+   431                                           
+   432                                                   # update weight decay and learning rate according to their schedule
+   433      1250      29195.3     23.4      0.0          it = len(data_loader) * epoch + it  # global training iteration
+   434      2500       4802.6      1.9      0.0          for i, param_group in enumerate(optimizer.param_groups):
+   435      2500       8446.5      3.4      0.0              param_group["lr"] = lr_schedule[it]
+   436      1250       1036.8      0.8      0.0              if i == 0:  # only the first group is regularized
+   437      1250       1710.2      1.4      0.0                  param_group["weight_decay"] = wd_schedule[it]
+   438                                           
+   439                                                   # Decompose data:
+   440      1250      81864.0     65.5      0.0          images =[
+   441      1250      88220.7     70.6      0.0              torch.empty((len(data),3,args.global_scale,args.global_scale)),torch.empty((len(data),3,args.global_scale,args.global_scale)),
+   442      1250      14413.8     11.5      0.0              torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
+   443      1250      11750.9      9.4      0.0              torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
+   444      1250      23389.5     18.7      0.0              torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
+   445      1250      16738.1     13.4      0.0              torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
+   446                                                   ]
+   447     12500       7074.1      0.6      0.0          for i in range(len(data[0])):
+   448    500000     142818.9      0.3      0.0              for j in range(len(data)):
+   449    500000   55152182.4    110.3     11.3                  images[i][j] = data[j][i].crop_tensor_normed.detach().clone()
+   450                                           
+   451                                                   # images = [d[0] for d in data]
+   452                                                   # images_coordinates = [d[1][0] for d in data]
+   453                                                   # images_flips = [d[1][1][0] for d in data]
+   454                                           
+   455                                                   # move images to gpu
+   456      1250   21187951.3  16950.4      4.3          images = [im.cuda(non_blocking=True) for im in images]
+   457                                                   # teacher and student forward passes + compute dino loss
+   458      1250      81392.2     65.1      0.0          with torch.cuda.amp.autocast(fp16_scaler is not None):
+   459      1250   21888190.8  17510.6      4.5              teacher_output = teacher(images[:2], args.batch_size_per_gpu, args.local_crops_number, args.patch_size, args.global_scale, args.local_scale)  # only the 2 global views pass through the teacher
+   460      1250   80546920.9  64437.5     16.5              student_output = student(images, args.batch_size_per_gpu, args.local_crops_number, args.patch_size, args.global_scale, args.local_scale)
+   461      1250   35100866.7  28080.7      7.2              loss = dino_loss(student_output, teacher_output, data, epoch)
+   462                                           
+   463      1250      70802.5     56.6      0.0          if not math.isfinite(loss.item()):
+   464                                                       print("Loss is {}, stopping training".format(loss.item()), force=True)
+   465                                                       sys.exit(1)
+   466                                           
+   467                                                   # student update
+   468      1250    3609996.5   2888.0      0.7          optimizer.zero_grad()
+   469      1250      13262.9     10.6      0.0          param_norms = None
+   470      1250        462.7      0.4      0.0          if fp16_scaler is None:
+   471                                                       loss.backward()
+   472                                                       if args.clip_grad:
+   473                                                           param_norms = utils.clip_gradients(student, args.clip_grad)
+   474                                                       utils.cancel_gradients_last_layer(epoch, student,
+   475                                                                                         args.freeze_last_layer)
+   476                                                       optimizer.step()
+   477                                                   else:
+   478      1250  100044224.1  80035.4     20.5              fp16_scaler.scale(loss).backward()
+   479      1250       5604.1      4.5      0.0              if args.clip_grad:
+   480      1250    2531530.4   2025.2      0.5                  fp16_scaler.unscale_(optimizer)  # unscale the gradients of optimizer's assigned params in-place
+   481      1250   73350181.7  58680.1     15.0                  param_norms = utils.clip_gradients(student, args.clip_grad)
+   482      1250       3690.5      3.0      0.0              utils.cancel_gradients_last_layer(epoch, student,
+   483      1250       1863.7      1.5      0.0                                                args.freeze_last_layer)
+   484      1250   40141880.2  32113.5      8.2              fp16_scaler.step(optimizer)
+   485      1250      92989.9     74.4      0.0              fp16_scaler.update()
+   486                                           
+   487                                                   # EMA update for the teacher
+   488      1250      19473.1     15.6      0.0          with torch.no_grad():
+   489      1250       5176.8      4.1      0.0              m = momentum_schedule[it]  # momentum parameter
+   490    197500    3699713.1     18.7      0.8              for param_q, param_k in zip(student.module.parameters(), teacher_without_ddp.parameters()):
+   491    197500   16423114.8     83.2      3.4                  param_k.data.mul_(m).add_((1 - m) * param_q.detach().data)
+   492                                           
+   493                                                   # logging
+   494      1250     113972.3     91.2      0.0          torch.cuda.synchronize()
+   495      1250      80836.1     64.7      0.0          metric_logger.update(loss=loss.item())
+   496      1250      10866.0      8.7      0.0          metric_logger.update(lr=optimizer.param_groups[0]["lr"])
+   497      1250       6695.7      5.4      0.0          metric_logger.update(wd=optimizer.param_groups[0]["weight_decay"])
+   498                                               # gather the stats from all processes
+   499         1       1318.2   1318.2      0.0      metric_logger.synchronize_between_processes()
+   500         1        466.1    466.1      0.0      print("Averaged stats:", metric_logger)
+   501         1         10.2     10.2      0.0      return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
+
