@@ -126,7 +126,7 @@ def DataAugmentationDINO(args, image, seed):
 #         labels.append(data[i][1])
 #     return augmented_crops, labels
 
-# @profile
+@profile
 def collate_function(batch, additional_arg):
     process_seed = random.randint(0, 1000000)
 
@@ -205,7 +205,7 @@ def collate_function(batch, additional_arg):
 
 
 os.environ["PL_TORCH_DISTRIBUTED_BACKEND"] = "nccl"
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 def save_arguments_to_json(args, filename):
     arguments = vars(args)  # Get the arguments as a dictionary
@@ -267,7 +267,7 @@ def get_args_parser():
         help optimization for larger ViT architectures. 0 for disabling.""")
     batch_size = parser.add_argument('--batch_size_per_gpu', default=40, type=int,
         help='Per-GPU batch-size : number of distinct images loaded on one GPU.')######################
-    parser.add_argument('--epochs', default=107, type=int, help='Number of epochs of training.')
+    parser.add_argument('--epochs', default=111, type=int, help='Number of epochs of training.')
     parser.add_argument('--freeze_last_layer', default=1, type=int, help="""Number of epochs
         during which we keep the output layer fixed. Typically doing so during
         the first epoch helps training. Try increasing this value if the loss does not decrease.""")
@@ -307,7 +307,7 @@ def get_args_parser():
     parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/ali_batch40_on_cpu", type=str, help='Path to save logs and checkpoints.')
     parser.add_argument('--saveckp_freq', default=20, type=int, help='Save checkpoint every x epochs.')
     parser.add_argument('--seed', default=0, type=int, help='Random seed.')
-    parser.add_argument('--num_workers', default=4, type=int, help='Number of data loading workers per GPU.')
+    parser.add_argument('--num_workers', default=16, type=int, help='Number of data loading workers per GPU.')
     parser.add_argument("--dist_url", default="env://", type=str, help="""url used to set up
         distributed training; see https://pytorch.org/docs/stable/distributed.html""")
     parser.add_argument("--local_rank", default=0, type=int, help="Please ignore and do not set this argument.")
