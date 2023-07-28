@@ -229,7 +229,7 @@ def get_args_parser():
         help optimization for larger ViT architectures. 0 for disabling.""")
     batch_size = parser.add_argument('--batch_size_per_gpu', default=40, type=int,
         help='Per-GPU batch-size : number of distinct images loaded on one GPU.')######################
-    parser.add_argument('--epochs', default=111, type=int, help='Number of epochs of training.')
+    parser.add_argument('--epochs', default=113, type=int, help='Number of epochs of training.')
     parser.add_argument('--freeze_last_layer', default=1, type=int, help="""Number of epochs
         during which we keep the output layer fixed. Typically doing so during
         the first epoch helps training. Try increasing this value if the loss does not decrease.""")
@@ -465,18 +465,6 @@ def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loade
             if i == 0:  # only the first group is regularized
                 param_group["weight_decay"] = wd_schedule[it]
 
-        # # Decompose data:
-        # images =[
-        #     torch.empty((len(data),3,args.global_scale,args.global_scale)),torch.empty((len(data),3,args.global_scale,args.global_scale)),
-        #     torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
-        #     torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
-        #     torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
-        #     torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
-        # ]
-        # for i in range(len(data[0])):
-        #     for j in range(len(data)):
-        #         images[i][j] = data[j][i].crop_tensor_normed.detach().clone()
-
         # move images to gpu
         images = [im.cuda(non_blocking=True) for im in images]
         # teacher and student forward passes + compute dino loss
@@ -566,17 +554,9 @@ class DINOLoss(nn.Module):
                 if v == iq:
                     # we skip cases where student and teacher operate on the same view
                     continue
-                
-                # # Calculate patch correspondences for the first image in the batch
-                # # which is also equal to other images in the batch:
-                # corr = correspondences(data[0][iq], data[0][v])
 
                 tensor1 = teacher_out[iq][:, corrs[iq][v].selected_crop1_patches, :]
                 tensor2 = student_out[v][:, corrs[iq][v].selected_crop2_patches, :]
-
-                # print('iq=', iq, 'v=', v, 'k=', k)
-                # print(corr.selected_crop1_patches)
-                # print(corr.selected_crop2_patches)
 
                 # Calculate Loss:
                 tensor2_softmax = F.log_softmax(tensor2, dim=-1)
@@ -629,57 +609,6 @@ class DINOLoss(nn.Module):
 
         # ema update
         self.center = self.center * self.center_momentum + batch_center * (1 - self.center_momentum)
-
-
-# class DataAugmentationDINO(object):
-#     def __init__(self, global_scale, local_scale, global_crops_scale, local_crops_scale, local_crops_number):
-#         flip_and_color_jitter = transforms.Compose([
-#             transforms.RandomHorizontalFlip(p=0.5),
-#             transforms.RandomApply(
-#                 [transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1)],
-#                 p=0.8
-#             ),
-#             transforms.RandomGrayscale(p=0.2),
-#         ])
-#         normalize = transforms.Compose([
-#             transforms.ToTensor(),
-#             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-#         ])####################################################################
-
-#         # first global crop
-#         self.global_transfo1 = transforms.Compose([
-#             transforms.RandomResizedCrop(global_scale, scale=global_crops_scale, interpolation=Image.BICUBIC),
-#             flip_and_color_jitter,
-#             utils.GaussianBlur(1.0),
-#             normalize,
-#         ])
-#         # second global crop
-#         self.global_transfo2 = transforms.Compose([
-#             transforms.RandomResizedCrop(global_scale, scale=global_crops_scale, interpolation=Image.BICUBIC),
-#             flip_and_color_jitter,
-#             utils.GaussianBlur(0.1),
-#             utils.Solarization(0.2),
-#             normalize,
-#         ])
-#         # transformation for the local small crops
-#         self.local_crops_number = local_crops_number
-#         self.local_transfo = transforms.Compose([
-#             transforms.RandomResizedCrop(local_scale, scale=local_crops_scale, interpolation=Image.BICUBIC),
-#             flip_and_color_jitter,
-#             utils.GaussianBlur(p=0.5),
-#             normalize,
-#         ])
-
-#     def __call__(self, image):
-#         global1 = augmented_crop(self.global_transfo1, image, patch_size=args.patch_size, global_scale=args.global_scale, local_scale=args.local_scale)
-#         global2 = augmented_crop(self.global_transfo2, image, patch_size=args.patch_size, global_scale=args.global_scale, local_scale=args.local_scale)
-        
-#         local_augmented_crops = []       
-#         for _ in range(self.local_crops_number):
-#             local_augmented_crops.append(augmented_crop(self.local_transfo, image, patch_size=args.patch_size, global_scale=args.global_scale, local_scale=args.local_scale))
-
-#         augmented_crops = [global1, global2] + local_augmented_crops
-#         return augmented_crops
 
 
 if __name__ == '__main__':
