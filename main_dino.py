@@ -470,8 +470,8 @@ def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loade
         # teacher and student forward passes + compute dino loss
         with torch.cuda.amp.autocast(fp16_scaler is not None):
             teacher_output = teacher(images[:2], args.batch_size_per_gpu, args.local_crops_number, args.patch_size, args.global_scale, args.local_scale)  # only the 2 global views pass through the teacher
-            student_output = student(images, args.batch_size_per_gpu, args.local_crops_number, args.patch_size, args.global_scale, args.local_scale)
-            loss = dino_loss(student_output, teacher_output, corrs, epoch)
+            student_output1, student_output2 = student(images, args.batch_size_per_gpu, args.local_crops_number, args.patch_size, args.global_scale, args.local_scale)
+            loss = dino_loss(student_output1, student_output2, teacher_output, corrs, epoch)
 
         if not math.isfinite(loss.item()):
             print("Loss is {}, stopping training".format(loss.item()), force=True)
@@ -531,13 +531,16 @@ class DINOLoss(nn.Module):
             np.ones(nepochs - warmup_teacher_temp_epochs) * teacher_temp
         ))
 
-    def forward(self, student_output, teacher_output, corrs, epoch):
+    def forward(self, student_output1, student_output2, teacher_output, corrs, epoch):
         """
         Cross-entropy between softmax outputs of the teacher and student networks.
         """
-        student_out = student_output / self.student_temp
-        student_out = student_out.chunk(self.ncrops)
+        student_out1 = student_output1 / self.student_temp
+        student_out1 = student_out1.chunk(2)
 
+        student_out2 = student_output2 / self.student_temp
+        student_out2 = student_out2.chunk(self.ncrops-2)
+        
         # teacher centering and sharpening
         temp = self.teacher_temp_schedule[epoch]
         teacher_out = F.softmax((teacher_output - self.center) / temp, dim=-1)
@@ -545,27 +548,29 @@ class DINOLoss(nn.Module):
 
         total_loss = 0
         total_loss_mean = 0
-        total_loss_sum = 0
-        n_loss_terms = 0
+        total_loss_sum1 = 0
+        total_loss_sum2 = 0
+        n_loss_terms1 = 0
+        n_loss_terms2 = 0
         lamda = 0.9
 
         for iq, q in enumerate(teacher_out):
-            for v in range(len(student_out)):
+            for v in range(len(student_out1)):
                 if v == iq:
                     # we skip cases where student and teacher operate on the same view
                     continue
 
                 tensor1 = teacher_out[iq][:, corrs[iq][v].selected_crop1_patches, :]
-                tensor2 = student_out[v][:, corrs[iq][v].selected_crop2_patches, :]
+                tensor2 = student_out1[v][:, corrs[iq][v].selected_crop2_patches, :]
 
                 # Calculate Loss:
                 tensor2_softmax = F.log_softmax(tensor2, dim=-1)
                 cross_entropy_loss = - tensor1 * tensor2_softmax
-                loss_sum = torch.sum(cross_entropy_loss, dim=-1)
+                loss_sum1 = torch.sum(cross_entropy_loss, dim=-1)
                 # step_loss = loss_sum.sum()
 
                 # total_loss_mean += loss_sum.mean()
-                total_loss_sum += loss_sum.mean()
+                total_loss_sum1 += loss_sum1.mean()
                 # n_loss_terms += 1
 
                 #Method3 loss function (mean):
@@ -582,8 +587,41 @@ class DINOLoss(nn.Module):
                 # if len(loss_sum) > 1:
                 #     total_loss_sum += (1-lamda)*(loss_sum[1:].mean())
                 
-                n_loss_terms += 1
-        total_loss = total_loss_sum / n_loss_terms
+                n_loss_terms1 += 1
+
+
+        for iq, q in enumerate(teacher_out):
+            for v in range(len(student_out2)):
+                tensor1 = teacher_out[iq][:, corrs[iq][v+2].selected_crop1_patches, :]
+                tensor2 = student_out2[v][:, corrs[iq][v+2].selected_crop2_patches, :]
+
+                # Calculate Loss:
+                tensor2_softmax = F.log_softmax(tensor2, dim=-1)
+                cross_entropy_loss = - tensor1 * tensor2_softmax
+                loss_sum2 = torch.sum(cross_entropy_loss, dim=-1)
+                # step_loss = loss_sum.sum()
+
+                # total_loss_mean += loss_sum.mean()
+                total_loss_sum2 += loss_sum2.mean()
+                # n_loss_terms += 1
+
+                #Method3 loss function (mean):
+                # total_loss_sum += loss_sum.sum()
+
+                #Method2 loss function:
+                # if len(loss_sum) == 1:
+                #     total_loss_sum += loss_sum[0]
+                # elif len(loss_sum) > 1:
+                #     total_loss_sum += lamda * loss_sum[0] * (len(loss_sum)-1) + (1-lamda)*(loss_sum[1:].sum())
+
+                #Method1 loss function:
+                # total_loss_sum += lamda * loss_sum[0] 
+                # if len(loss_sum) > 1:
+                #     total_loss_sum += (1-lamda)*(loss_sum[1:].mean())
+                
+                n_loss_terms2 += 1
+
+        total_loss = (total_loss_sum1 + total_loss_sum2) / (n_loss_terms1 + n_loss_terms2)
                 
         # total_loss /= n_loss_terms
         self.update_center(teacher_output)
