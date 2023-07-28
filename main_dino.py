@@ -101,21 +101,17 @@ def DataAugmentationDINO(args, image, seed):
 
     set_seed(seed)
     global1 = augmented_crop(global_transfo1, image, patch_size=args.patch_size, global_scale=args.global_scale, local_scale=args.local_scale)
-    # global1_image = global1.crop_tensor_normed
+
     set_seed(seed+1)
     global2 = augmented_crop(global_transfo2, image, patch_size=args.patch_size, global_scale=args.global_scale, local_scale=args.local_scale)
-    # global2_image = global2.crop_tensor_normed
 
     local_augmented_crops = [] 
-    # local_augmented_images = []      
     for j in range(args.local_crops_number):
         set_seed(seed+2+j)
         local_augmented_crops.append(augmented_crop(local_transfo, image, patch_size=args.patch_size, global_scale=args.global_scale, local_scale=args.local_scale))
-        # local_augmented_images.append(local_augmented_crops[j].crop_tensor_normed)
 
     augmented_crops = [global1, global2] + local_augmented_crops
-    # augmented_images = [global1_image, global2_image] + local_augmented_images
-    return augmented_crops #, augmented_images
+    return augmented_crops
 
 # def custom_collate(data):
 #     augmented_crops = []
@@ -135,44 +131,10 @@ def collate_function(batch, additional_arg):
 
     # Apply augmentations to each sample within the batch
     augmented_samples = []
-    # augmented_image_samples = []
-    # global1 = []
-    # global2= []
-    # local1 = []
-    # local2 = []
-    # local3 = []
-    # local4 = []
-    # local5 = []
-    # local6 = []
-    # local7 = []
-    # local8 = []
+
     for i, sample in enumerate(samples):
-        augmented_sample = DataAugmentationDINO(additional_arg, sample, process_seed) #, augmented_image_sample
-        # augmented_image_samples.append(augmented_image_sample)
-        # if global1 == []:
-        #     global1 = augmented_image_sample[0].unsqueeze(0)
-        #     global2 = augmented_image_sample[1].unsqueeze(0)
-        #     local1 = augmented_image_sample[2].unsqueeze(0)
-        #     local2 = augmented_image_sample[3].unsqueeze(0)
-        #     local3 = augmented_image_sample[4].unsqueeze(0)
-        #     local4 = augmented_image_sample[5].unsqueeze(0)
-        #     local5 = augmented_image_sample[6].unsqueeze(0)
-        #     local6 = augmented_image_sample[7].unsqueeze(0)
-        #     local7 = augmented_image_sample[8].unsqueeze(0)
-        #     local8 = augmented_image_sample[9].unsqueeze(0)
-        # else:
-        #     global1 = torch.cat((global1, augmented_image_sample[0].unsqueeze(0)), 0)
-        #     global2 = torch.cat((global2, augmented_image_sample[1].unsqueeze(0)), 0)
-        #     local1 = torch.cat((local1, augmented_image_sample[2].unsqueeze(0)), 0)
-        #     local2 = torch.cat((local2, augmented_image_sample[3].unsqueeze(0)), 0)
-        #     local3 = torch.cat((local3, augmented_image_sample[4].unsqueeze(0)), 0)
-        #     local4 = torch.cat((local4, augmented_image_sample[5].unsqueeze(0)), 0)
-        #     local5 = torch.cat((local5, augmented_image_sample[6].unsqueeze(0)), 0)
-        #     local6 = torch.cat((local6, augmented_image_sample[7].unsqueeze(0)), 0)
-        #     local7 = torch.cat((local7, augmented_image_sample[8].unsqueeze(0)), 0)
-        #     local8 = torch.cat((local8, augmented_image_sample[9].unsqueeze(0)), 0)
+        augmented_sample = DataAugmentationDINO(additional_arg, sample, process_seed)
         augmented_samples.append(augmented_sample)
-        # images = [global1, global2, local1, local2, local3, local4, local5, local6, local7, local8]
     # show_images(augmented_samples, additional_arg.batch_size_per_gpu)
     
     # Decompose data:
@@ -307,7 +269,7 @@ def get_args_parser():
     parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/ali_batch40_on_cpu", type=str, help='Path to save logs and checkpoints.')
     parser.add_argument('--saveckp_freq', default=20, type=int, help='Save checkpoint every x epochs.')
     parser.add_argument('--seed', default=0, type=int, help='Random seed.')
-    parser.add_argument('--num_workers', default=16, type=int, help='Number of data loading workers per GPU.')
+    parser.add_argument('--num_workers', default=8, type=int, help='Number of data loading workers per GPU.')
     parser.add_argument("--dist_url", default="env://", type=str, help="""url used to set up
         distributed training; see https://pytorch.org/docs/stable/distributed.html""")
     parser.add_argument("--local_rank", default=0, type=int, help="Please ignore and do not set this argument.")
