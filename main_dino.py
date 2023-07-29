@@ -101,21 +101,17 @@ def DataAugmentationDINO(args, image, seed):
 
     set_seed(seed)
     global1 = augmented_crop(global_transfo1, image, patch_size=args.patch_size, global_scale=args.global_scale, local_scale=args.local_scale)
-    # global1_image = global1.crop_tensor_normed
+
     set_seed(seed+1)
     global2 = augmented_crop(global_transfo2, image, patch_size=args.patch_size, global_scale=args.global_scale, local_scale=args.local_scale)
-    # global2_image = global2.crop_tensor_normed
 
     local_augmented_crops = [] 
-    # local_augmented_images = []      
     for j in range(args.local_crops_number):
         set_seed(seed+2+j)
         local_augmented_crops.append(augmented_crop(local_transfo, image, patch_size=args.patch_size, global_scale=args.global_scale, local_scale=args.local_scale))
-        # local_augmented_images.append(local_augmented_crops[j].crop_tensor_normed)
 
     augmented_crops = [global1, global2] + local_augmented_crops
-    # augmented_images = [global1_image, global2_image] + local_augmented_images
-    return augmented_crops #, augmented_images
+    return augmented_crops
 
 # def custom_collate(data):
 #     augmented_crops = []
@@ -135,44 +131,10 @@ def collate_function(batch, additional_arg):
 
     # Apply augmentations to each sample within the batch
     augmented_samples = []
-    # augmented_image_samples = []
-    # global1 = []
-    # global2= []
-    # local1 = []
-    # local2 = []
-    # local3 = []
-    # local4 = []
-    # local5 = []
-    # local6 = []
-    # local7 = []
-    # local8 = []
+
     for i, sample in enumerate(samples):
-        augmented_sample = DataAugmentationDINO(additional_arg, sample, process_seed) #, augmented_image_sample
-        # augmented_image_samples.append(augmented_image_sample)
-        # if global1 == []:
-        #     global1 = augmented_image_sample[0].unsqueeze(0)
-        #     global2 = augmented_image_sample[1].unsqueeze(0)
-        #     local1 = augmented_image_sample[2].unsqueeze(0)
-        #     local2 = augmented_image_sample[3].unsqueeze(0)
-        #     local3 = augmented_image_sample[4].unsqueeze(0)
-        #     local4 = augmented_image_sample[5].unsqueeze(0)
-        #     local5 = augmented_image_sample[6].unsqueeze(0)
-        #     local6 = augmented_image_sample[7].unsqueeze(0)
-        #     local7 = augmented_image_sample[8].unsqueeze(0)
-        #     local8 = augmented_image_sample[9].unsqueeze(0)
-        # else:
-        #     global1 = torch.cat((global1, augmented_image_sample[0].unsqueeze(0)), 0)
-        #     global2 = torch.cat((global2, augmented_image_sample[1].unsqueeze(0)), 0)
-        #     local1 = torch.cat((local1, augmented_image_sample[2].unsqueeze(0)), 0)
-        #     local2 = torch.cat((local2, augmented_image_sample[3].unsqueeze(0)), 0)
-        #     local3 = torch.cat((local3, augmented_image_sample[4].unsqueeze(0)), 0)
-        #     local4 = torch.cat((local4, augmented_image_sample[5].unsqueeze(0)), 0)
-        #     local5 = torch.cat((local5, augmented_image_sample[6].unsqueeze(0)), 0)
-        #     local6 = torch.cat((local6, augmented_image_sample[7].unsqueeze(0)), 0)
-        #     local7 = torch.cat((local7, augmented_image_sample[8].unsqueeze(0)), 0)
-        #     local8 = torch.cat((local8, augmented_image_sample[9].unsqueeze(0)), 0)
+        augmented_sample = DataAugmentationDINO(additional_arg, sample, process_seed)
         augmented_samples.append(augmented_sample)
-        # images = [global1, global2, local1, local2, local3, local4, local5, local6, local7, local8]
     # show_images(augmented_samples, additional_arg.batch_size_per_gpu)
     
     # Decompose data:
@@ -502,25 +464,13 @@ def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loade
             if i == 0:  # only the first group is regularized
                 param_group["weight_decay"] = wd_schedule[it]
 
-        # # Decompose data:
-        # images =[
-        #     torch.empty((len(data),3,args.global_scale,args.global_scale)),torch.empty((len(data),3,args.global_scale,args.global_scale)),
-        #     torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
-        #     torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
-        #     torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
-        #     torch.empty((len(data),3,args.local_scale,args.local_scale)),torch.empty((len(data),3,args.local_scale,args.local_scale)),
-        # ]
-        # for i in range(len(data[0])):
-        #     for j in range(len(data)):
-        #         images[i][j] = data[j][i].crop_tensor_normed.detach().clone()
-
         # move images to gpu
         images = [im.cuda(non_blocking=True) for im in images]
         # teacher and student forward passes + compute dino loss
         with torch.cuda.amp.autocast(fp16_scaler is not None):
             teacher_output = teacher(images[:2], args.batch_size_per_gpu, args.local_crops_number, args.patch_size, args.global_scale, args.local_scale)  # only the 2 global views pass through the teacher
-            student_output = student(images, args.batch_size_per_gpu, args.local_crops_number, args.patch_size, args.global_scale, args.local_scale)
-            loss = dino_loss(student_output, teacher_output, corrs, epoch)
+            student_output1, student_output2 = student(images, args.batch_size_per_gpu, args.local_crops_number, args.patch_size, args.global_scale, args.local_scale)
+            loss = dino_loss(student_output1, student_output2, teacher_output, corrs, epoch)
 
         if not math.isfinite(loss.item()):
             print("Loss is {}, stopping training".format(loss.item()), force=True)
@@ -580,69 +530,73 @@ class DINOLoss(nn.Module):
             np.ones(nepochs - warmup_teacher_temp_epochs) * teacher_temp
         ))
 
-    def forward(self, student_output, teacher_output, corrs, epoch):
+    def forward(self, student_output1, student_output2, teacher_output, corrs, epoch):
         """
         Cross-entropy between softmax outputs of the teacher and student networks.
         """
-        student_out = student_output / self.student_temp
-        student_out = student_out.chunk(self.ncrops)
+        student_out1 = student_output1 / self.student_temp
+        student_out1 = student_out1.chunk(2)
 
+        student_out2 = student_output2 / self.student_temp
+        student_out2 = student_out2.chunk(self.ncrops-2)
+        
         # teacher centering and sharpening
         temp = self.teacher_temp_schedule[epoch]
         teacher_out = F.softmax((teacher_output - self.center) / temp, dim=-1)
         teacher_out = teacher_out.detach().chunk(2)
 
         total_loss = 0
-        total_loss_mean = 0
-        total_loss_sum = 0
-        n_loss_terms = 0
+        total_loss_sum1 = 0
+        total_loss_sum2 = 0
+        n_loss_terms1 = 0
+        n_loss_terms2 = 0
         lamda = 0.9
 
         for iq, q in enumerate(teacher_out):
-            for v in range(len(student_out)):
+            for v in range(len(student_out1)):
                 if v == iq:
                     # we skip cases where student and teacher operate on the same view
                     continue
-                
-                # # Calculate patch correspondences for the first image in the batch
-                # # which is also equal to other images in the batch:
-                # corr = correspondences(data[0][iq], data[0][v])
 
                 tensor1 = teacher_out[iq][:, corrs[iq][v].selected_crop1_patches, :]
-                tensor2 = student_out[v][:, corrs[iq][v].selected_crop2_patches, :]
-
-                # print('iq=', iq, 'v=', v, 'k=', k)
-                # print(corr.selected_crop1_patches)
-                # print(corr.selected_crop2_patches)
+                tensor2 = student_out1[v][:, corrs[iq][v].selected_crop2_patches, :]
 
                 # Calculate Loss:
                 tensor2_softmax = F.log_softmax(tensor2, dim=-1)
                 cross_entropy_loss = - tensor1 * tensor2_softmax
-                loss_sum = torch.sum(cross_entropy_loss, dim=-1)
-                # step_loss = loss_sum.sum()
+                loss_sum1 = torch.sum(cross_entropy_loss, dim=-1)
 
-                # total_loss_mean += loss_sum.mean()
-                total_loss_sum += loss_sum.mean()
-                # n_loss_terms += 1
+                total_loss_sum1 += loss_sum1.mean()
 
-                #Method3 loss function (mean):
-                # total_loss_sum += loss_sum.sum()
-
-                #Method2 loss function:
-                # if len(loss_sum) == 1:
-                #     total_loss_sum += loss_sum[0]
-                # elif len(loss_sum) > 1:
-                #     total_loss_sum += lamda * loss_sum[0] * (len(loss_sum)-1) + (1-lamda)*(loss_sum[1:].sum())
-
-                #Method1 loss function:
+                #Lambda loss function:
                 # total_loss_sum += lamda * loss_sum[0] 
                 # if len(loss_sum) > 1:
                 #     total_loss_sum += (1-lamda)*(loss_sum[1:].mean())
                 
-                n_loss_terms += 1
-        total_loss = total_loss_sum / n_loss_terms
+                n_loss_terms1 += 1
+
+
+        for iq, q in enumerate(teacher_out):
+            for v in range(len(student_out2)):
+                tensor1 = teacher_out[iq][:, corrs[iq][v+2].selected_crop1_patches, :]
+                tensor2 = student_out2[v][:, corrs[iq][v+2].selected_crop2_patches, :]
+
+                # Calculate Loss:
+                tensor2_softmax = F.log_softmax(tensor2, dim=-1)
+                cross_entropy_loss = - tensor1 * tensor2_softmax
+                loss_sum2 = torch.sum(cross_entropy_loss, dim=-1)
+
+                total_loss_sum2 += loss_sum2.mean()
+
+                #Lambda loss function:
+                # total_loss_sum += lamda * loss_sum[0] 
+                # if len(loss_sum) > 1:
+                #     total_loss_sum += (1-lamda)*(loss_sum[1:].mean())
                 
-        # total_loss /= n_loss_terms
+                n_loss_terms2 += 1
+
+        total_loss = (total_loss_sum1 + total_loss_sum2) / (n_loss_terms1 + n_loss_terms2)
+                
         self.update_center(teacher_output)
         return total_loss
 
@@ -666,57 +620,6 @@ class DINOLoss(nn.Module):
 
         # ema update
         self.center = self.center * self.center_momentum + batch_center * (1 - self.center_momentum)
-
-
-# class DataAugmentationDINO(object):
-#     def __init__(self, global_scale, local_scale, global_crops_scale, local_crops_scale, local_crops_number):
-#         flip_and_color_jitter = transforms.Compose([
-#             transforms.RandomHorizontalFlip(p=0.5),
-#             transforms.RandomApply(
-#                 [transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1)],
-#                 p=0.8
-#             ),
-#             transforms.RandomGrayscale(p=0.2),
-#         ])
-#         normalize = transforms.Compose([
-#             transforms.ToTensor(),
-#             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-#         ])####################################################################
-
-#         # first global crop
-#         self.global_transfo1 = transforms.Compose([
-#             transforms.RandomResizedCrop(global_scale, scale=global_crops_scale, interpolation=Image.BICUBIC),
-#             flip_and_color_jitter,
-#             utils.GaussianBlur(1.0),
-#             normalize,
-#         ])
-#         # second global crop
-#         self.global_transfo2 = transforms.Compose([
-#             transforms.RandomResizedCrop(global_scale, scale=global_crops_scale, interpolation=Image.BICUBIC),
-#             flip_and_color_jitter,
-#             utils.GaussianBlur(0.1),
-#             utils.Solarization(0.2),
-#             normalize,
-#         ])
-#         # transformation for the local small crops
-#         self.local_crops_number = local_crops_number
-#         self.local_transfo = transforms.Compose([
-#             transforms.RandomResizedCrop(local_scale, scale=local_crops_scale, interpolation=Image.BICUBIC),
-#             flip_and_color_jitter,
-#             utils.GaussianBlur(p=0.5),
-#             normalize,
-#         ])
-
-#     def __call__(self, image):
-#         global1 = augmented_crop(self.global_transfo1, image, patch_size=args.patch_size, global_scale=args.global_scale, local_scale=args.local_scale)
-#         global2 = augmented_crop(self.global_transfo2, image, patch_size=args.patch_size, global_scale=args.global_scale, local_scale=args.local_scale)
-        
-#         local_augmented_crops = []       
-#         for _ in range(self.local_crops_number):
-#             local_augmented_crops.append(augmented_crop(self.local_transfo, image, patch_size=args.patch_size, global_scale=args.global_scale, local_scale=args.local_scale))
-
-#         augmented_crops = [global1, global2] + local_augmented_crops
-#         return augmented_crops
 
 
 if __name__ == '__main__':

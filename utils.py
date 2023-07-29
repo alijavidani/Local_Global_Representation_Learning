@@ -624,9 +624,12 @@ class MultiCropWrapper(nn.Module):
                 _out = _out[0]
 
             if _out.shape[1] == pow(int(local_scale/patch_size),2)+1:
-                zeros_tensor = torch.zeros([batch_size_per_gpu*local_crops_number, ((pow(int(global_scale/patch_size),2)+1)-(pow(int(local_scale/patch_size),2)+1)), _out.shape[2]]).to(x[0].device)
+                output1 = output
+                output2 = _out
+                return self.head(output1), self.head(output2)
+                # zeros_tensor = torch.zeros([batch_size_per_gpu*local_crops_number, ((pow(int(global_scale/patch_size),2)+1)-(pow(int(local_scale/patch_size),2)+1)), _out.shape[2]]).to(x[0].device)
                 # zeros_tensor = torch.empty([32, 160, 192]).to(x[0].device)
-                _out = torch.cat((_out, zeros_tensor), dim=1)
+                # _out = torch.cat((_out, zeros_tensor), dim=1)
 
             # accumulate outputs
             output = torch.cat((output, _out))
