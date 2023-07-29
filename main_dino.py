@@ -122,7 +122,7 @@ def DataAugmentationDINO(args, image, seed):
 #         labels.append(data[i][1])
 #     return augmented_crops, labels
 
-@profile
+# @profile
 def collate_function(batch, additional_arg):
     process_seed = random.randint(0, 1000000)
 
@@ -167,7 +167,7 @@ def collate_function(batch, additional_arg):
 
 
 os.environ["PL_TORCH_DISTRIBUTED_BACKEND"] = "nccl"
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_VISIBLE_DEVICES"]="1,2"
 
 def save_arguments_to_json(args, filename):
     arguments = vars(args)  # Get the arguments as a dictionary
@@ -229,7 +229,7 @@ def get_args_parser():
         help optimization for larger ViT architectures. 0 for disabling.""")
     batch_size = parser.add_argument('--batch_size_per_gpu', default=40, type=int,
         help='Per-GPU batch-size : number of distinct images loaded on one GPU.')######################
-    parser.add_argument('--epochs', default=113, type=int, help='Number of epochs of training.')
+    parser.add_argument('--epochs', default=100, type=int, help='Number of epochs of training.')
     parser.add_argument('--freeze_last_layer', default=1, type=int, help="""Number of epochs
         during which we keep the output layer fixed. Typically doing so during
         the first epoch helps training. Try increasing this value if the loss does not decrease.""")
@@ -265,8 +265,8 @@ def get_args_parser():
 
     parser.add_argument('--data_path', default='/home/alij/Datasets/Cifar10/train', type=str,
         help='Please specify path to the ImageNet training data.')
-    # parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/mean_patch{patch_size.default}_out{out_dim.default}_{arch.default[4:]}_fp{16 if fp16.default else 32}_batch{batch_size.default}_ours_same_batch_augmentation_on_cpu", type=str, help='Path to save logs and checkpoints.')
-    parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/ali_batch40_on_cpu", type=str, help='Path to save logs and checkpoints.')
+    parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/mean_patch{patch_size.default}_out{out_dim.default}_{arch.default[4:]}_fp{16 if fp16.default else 32}_batch{batch_size.default}_ours_same_batch_augmentation_on_cpu_optimized_code", type=str, help='Path to save logs and checkpoints.')
+    # parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/ali_batch40_on_cpu", type=str, help='Path to save logs and checkpoints.')
     parser.add_argument('--saveckp_freq', default=20, type=int, help='Save checkpoint every x epochs.')
     parser.add_argument('--seed', default=0, type=int, help='Random seed.')
     parser.add_argument('--num_workers', default=8, type=int, help='Number of data loading workers per GPU.')
@@ -449,7 +449,7 @@ def train_dino(args):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
 
-@profile
+# @profile
 def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loader,
                     optimizer, lr_schedule, wd_schedule, momentum_schedule,epoch,
                     fp16_scaler, args):
@@ -547,7 +547,6 @@ class DINOLoss(nn.Module):
         teacher_out = teacher_out.detach().chunk(2)
 
         total_loss = 0
-        total_loss_mean = 0
         total_loss_sum1 = 0
         total_loss_sum2 = 0
         n_loss_terms1 = 0
@@ -567,22 +566,10 @@ class DINOLoss(nn.Module):
                 tensor2_softmax = F.log_softmax(tensor2, dim=-1)
                 cross_entropy_loss = - tensor1 * tensor2_softmax
                 loss_sum1 = torch.sum(cross_entropy_loss, dim=-1)
-                # step_loss = loss_sum.sum()
 
-                # total_loss_mean += loss_sum.mean()
                 total_loss_sum1 += loss_sum1.mean()
-                # n_loss_terms += 1
 
-                #Method3 loss function (mean):
-                # total_loss_sum += loss_sum.sum()
-
-                #Method2 loss function:
-                # if len(loss_sum) == 1:
-                #     total_loss_sum += loss_sum[0]
-                # elif len(loss_sum) > 1:
-                #     total_loss_sum += lamda * loss_sum[0] * (len(loss_sum)-1) + (1-lamda)*(loss_sum[1:].sum())
-
-                #Method1 loss function:
+                #Lambda loss function:
                 # total_loss_sum += lamda * loss_sum[0] 
                 # if len(loss_sum) > 1:
                 #     total_loss_sum += (1-lamda)*(loss_sum[1:].mean())
@@ -599,22 +586,10 @@ class DINOLoss(nn.Module):
                 tensor2_softmax = F.log_softmax(tensor2, dim=-1)
                 cross_entropy_loss = - tensor1 * tensor2_softmax
                 loss_sum2 = torch.sum(cross_entropy_loss, dim=-1)
-                # step_loss = loss_sum.sum()
 
-                # total_loss_mean += loss_sum.mean()
                 total_loss_sum2 += loss_sum2.mean()
-                # n_loss_terms += 1
 
-                #Method3 loss function (mean):
-                # total_loss_sum += loss_sum.sum()
-
-                #Method2 loss function:
-                # if len(loss_sum) == 1:
-                #     total_loss_sum += loss_sum[0]
-                # elif len(loss_sum) > 1:
-                #     total_loss_sum += lamda * loss_sum[0] * (len(loss_sum)-1) + (1-lamda)*(loss_sum[1:].sum())
-
-                #Method1 loss function:
+                #Lambda loss function:
                 # total_loss_sum += lamda * loss_sum[0] 
                 # if len(loss_sum) > 1:
                 #     total_loss_sum += (1-lamda)*(loss_sum[1:].mean())
@@ -623,7 +598,6 @@ class DINOLoss(nn.Module):
 
         total_loss = (total_loss_sum1 + total_loss_sum2) / (n_loss_terms1 + n_loss_terms2)
                 
-        # total_loss /= n_loss_terms
         self.update_center(teacher_output)
         return total_loss
 
