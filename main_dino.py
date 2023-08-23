@@ -195,7 +195,7 @@ def get_args_parser():
         values leads to better performance but requires more memory. Applies only
         for ViTs (vit_tiny, vit_small and vit_base). If <16, we recommend disabling
         mixed precision training (--use_fp16 false) to avoid unstabilities.""") #################
-    out_dim = parser.add_argument('--out_dim', default=65536, type=int, help="""Dimensionality of
+    out_dim = parser.add_argument('--out_dim', default=10000, type=int, help="""Dimensionality of
         the DINO head output. For complex and large datasets large values (like 65k) work well.""")
     parser.add_argument('--norm_last_layer', default=True, type=utils.bool_flag,
         help="""Whether or not to weight normalize the last layer of the DINO head.
@@ -230,7 +230,7 @@ def get_args_parser():
     parser.add_argument('--clip_grad', type=float, default=3.0, help="""Maximal parameter
         gradient norm if using gradient clipping. Clipping with norm .3 ~ 1.0 can
         help optimization for larger ViT architectures. 0 for disabling.""")
-    batch_size = parser.add_argument('--batch_size_per_gpu', default=10, type=int,
+    batch_size = parser.add_argument('--batch_size_per_gpu', default=20, type=int,
         help='Per-GPU batch-size : number of distinct images loaded on one GPU.')######################
     parser.add_argument('--epochs', default=100, type=int, help='Number of epochs of training.')
     parser.add_argument('--freeze_last_layer', default=1, type=int, help="""Number of epochs
@@ -266,9 +266,9 @@ def get_args_parser():
     # Cifar10 path:/home/alij/Datasets/Cifar10/train
     # Imagenet100 path: /home/alij/Datasets/Imagenet100/train
 
-    parser.add_argument('--data_path', default='/amin/imagenet/imagenet/train', type=str,
+    parser.add_argument('--data_path', default='/home/alij/Datasets/Imagenet100/train', type=str,
         help='Please specify path to the ImageNet training data.')
-    parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/ImageNet/Ours/Network_Checkpoints/mean_patch{patch_size.default}_out{out_dim.default}_{arch.default[4:]}_fp{16 if fp16.default else 32}_batch{batch_size.default}_ours_same_batch_augmentation", type=str, help='Path to save logs and checkpoints.')
+    parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Imagenet100/Ours/Network_Checkpoints/mean_patch{patch_size.default}_out{out_dim.default}_{arch.default[4:]}_fp{16 if fp16.default else 32}_batch{batch_size.default}_ours_same_batch_augmentation_with_resize", type=str, help='Path to save logs and checkpoints.')
     # parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/ali_batch40_on_cpu", type=str, help='Path to save logs and checkpoints.')
     parser.add_argument('--saveckp_freq', default=20, type=int, help='Save checkpoint every x epochs.')
     parser.add_argument('--seed', default=0, type=int, help='Random seed.')
