@@ -230,7 +230,7 @@ def get_args_parser():
     parser.add_argument('--clip_grad', type=float, default=3.0, help="""Maximal parameter
         gradient norm if using gradient clipping. Clipping with norm .3 ~ 1.0 can
         help optimization for larger ViT architectures. 0 for disabling.""")
-    batch_size = parser.add_argument('--batch_size_per_gpu', default=10, type=int,
+    batch_size = parser.add_argument('--batch_size_per_gpu', default=4, type=int,
         help='Per-GPU batch-size : number of distinct images loaded on one GPU.')######################
     parser.add_argument('--epochs', default=100, type=int, help='Number of epochs of training.')
     parser.add_argument('--freeze_last_layer', default=1, type=int, help="""Number of epochs
@@ -268,9 +268,9 @@ def get_args_parser():
 
     parser.add_argument('--data_path', default='/amin/imagenet/imagenet/train', type=str,
         help='Please specify path to the ImageNet training data.')
-    parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/ImageNet/Ours/Network_Checkpoints/mean_patch{patch_size.default}_out{out_dim.default}_{arch.default[4:]}_fp{16 if fp16.default else 32}_batch{batch_size.default}_ours_same_batch_augmentation", type=str, help='Path to save logs and checkpoints.')
+    parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/ImageNet/Ours/Network_Checkpoints/lamda0.8_sum_patch{patch_size.default}_out{out_dim.default}_{arch.default[4:]}_fp{16 if fp16.default else 32}_batch{batch_size.default}_ours_same_batch_augmentation", type=str, help='Path to save logs and checkpoints.')
     # parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/ali_batch40_on_cpu", type=str, help='Path to save logs and checkpoints.')
-    parser.add_argument('--saveckp_freq', default=20, type=int, help='Save checkpoint every x epochs.')
+    parser.add_argument('--saveckp_freq', default=10, type=int, help='Save checkpoint every x epochs.')
     parser.add_argument('--seed', default=0, type=int, help='Random seed.')
     parser.add_argument('--num_workers', default=8, type=int, help='Number of data loading workers per GPU.')
     parser.add_argument("--dist_url", default="env://", type=str, help="""url used to set up
@@ -554,7 +554,7 @@ class DINOLoss(nn.Module):
         total_loss_sum2 = 0
         n_loss_terms1 = 0
         n_loss_terms2 = 0
-        lamda = 0.9
+        lamda = 0.8
 
         for iq, q in enumerate(teacher_out):
             for v in range(len(student_out1)):
@@ -570,13 +570,27 @@ class DINOLoss(nn.Module):
                 cross_entropy_loss = - tensor1 * tensor2_softmax
                 loss_sum1 = torch.sum(cross_entropy_loss, dim=-1)
 
-                total_loss_sum1 += loss_sum1.mean()
+                # Mean Loss Function:
+                # total_loss_sum1 += loss_sum1.mean()
 
-                #Lambda loss function:
-                # total_loss_sum += lamda * loss_sum[0] 
-                # if len(loss_sum) > 1:
-                #     total_loss_sum += (1-lamda)*(loss_sum[1:].mean())
-                
+                # Sum Loss Function:
+                # total_loss_sum1 += loss_sum1.sum(dim=1).mean()
+
+                # Lambda Mean Loss function:
+                # patch0_losses = lamda * loss_sum1[:,0]
+                # if loss_sum1.shape[1]>1:
+                #     other_patch_losses = (1-lamda)*(loss_sum1[:, 1:].mean(dim=-1))
+                #     total_loss_sum1 += (patch0_losses + other_patch_losses).mean()
+                # else:
+                #     total_loss_sum1 += patch0_losses.mean()
+
+                # Lambda Sum Loss function:
+                patch0_losses = lamda * loss_sum1[:,0]
+                if loss_sum1.shape[1]>1:
+                    other_patch_losses = (1-lamda)*(loss_sum1[:, 1:].sum(dim=-1))
+                    total_loss_sum1 += (patch0_losses + other_patch_losses).sum()
+                else:
+                    total_loss_sum1 += patch0_losses.sum()
                 n_loss_terms1 += 1
 
 
@@ -590,13 +604,28 @@ class DINOLoss(nn.Module):
                 cross_entropy_loss = - tensor1 * tensor2_softmax
                 loss_sum2 = torch.sum(cross_entropy_loss, dim=-1)
 
-                total_loss_sum2 += loss_sum2.mean()
+                # Mean Loss Function:
+                # total_loss_sum2 += loss_sum2.mean()
 
-                #Lambda loss function:
-                # total_loss_sum += lamda * loss_sum[0] 
-                # if len(loss_sum) > 1:
-                #     total_loss_sum += (1-lamda)*(loss_sum[1:].mean())
-                
+                # Sum Loss Function:
+                # total_loss_sum2 += loss_sum2.sum(dim=1).mean()
+
+                #Lambda Mean Loss function:
+                # patch0_losses = lamda * loss_sum2[:,0]
+                # if loss_sum2.shape[1]>1:
+                #     other_patch_losses = (1-lamda)*(loss_sum2[:, 1:].mean(dim=-1))
+                #     total_loss_sum2 += (patch0_losses + other_patch_losses).mean()
+                # else:
+                #     total_loss_sum2 += patch0_losses.mean()
+
+                # Lambda Sum Loss function:
+                patch0_losses = lamda * loss_sum2[:,0]
+                if loss_sum2.shape[1]>1:
+                    other_patch_losses = (1-lamda)*(loss_sum2[:, 1:].sum(dim=-1))
+                    total_loss_sum2 += (patch0_losses + other_patch_losses).sum()
+                else:
+                    total_loss_sum2 += patch0_losses.sum()
+
                 n_loss_terms2 += 1
 
         total_loss = (total_loss_sum1 + total_loss_sum2) / (n_loss_terms1 + n_loss_terms2)
