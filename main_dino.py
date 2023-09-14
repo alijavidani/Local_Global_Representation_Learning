@@ -52,7 +52,7 @@ def get_args_parser():
     parser = argparse.ArgumentParser('DINO', add_help=False)
 
     # Model parameters
-    arch = parser.add_argument('--arch', default='vit_tiny', type=str,
+    arch = parser.add_argument('--arch', default='vit_base', type=str,
         choices=['vit_tiny', 'vit_small', 'vit_base', 'xcit', 'deit_tiny', 'deit_small'] \
                 + torchvision_archs + torch.hub.list("facebookresearch/xcit:main"),
         help="""Name of architecture to train. For quick experiments with ViTs,
@@ -62,7 +62,7 @@ def get_args_parser():
         values leads to better performance but requires more memory. Applies only
         for ViTs (vit_tiny, vit_small and vit_base). If <16, we recommend disabling
         mixed precision training (--use_fp16 false) to avoid unstabilities.""") #################
-    out_dim = parser.add_argument('--out_dim', default=1000, type=int, help="""Dimensionality of
+    out_dim = parser.add_argument('--out_dim', default=65536, type=int, help="""Dimensionality of
         the DINO head output. For complex and large datasets large values (like 65k) work well.""")
     parser.add_argument('--norm_last_layer', default=True, type=utils.bool_flag,
         help="""Whether or not to weight normalize the last layer of the DINO head.
@@ -97,7 +97,7 @@ def get_args_parser():
     parser.add_argument('--clip_grad', type=float, default=3.0, help="""Maximal parameter
         gradient norm if using gradient clipping. Clipping with norm .3 ~ 1.0 can
         help optimization for larger ViT architectures. 0 for disabling.""")
-    batch_size = parser.add_argument('--batch_size_per_gpu', default=130, type=int,
+    batch_size = parser.add_argument('--batch_size_per_gpu', default=4, type=int,
         help='Per-GPU batch-size : number of distinct images loaded on one GPU.')######################
     parser.add_argument('--epochs', default=100, type=int, help='Number of epochs of training.')
     parser.add_argument('--freeze_last_layer', default=1, type=int, help="""Number of epochs
@@ -131,12 +131,12 @@ def get_args_parser():
     # Cifar10 path:/home/alij/Datasets/Cifar10/train
     # Imagenet100 path: /home/alij/Datasets/Imagenet100/train
 
-    parser.add_argument('--data_path', default='/home/alij/Datasets/Cifar10/train', type=str,
+    parser.add_argument('--data_path', default='/amin/imagenet/imagenet/train', type=str,
         help='Please specify path to the ImageNet training data.')
-    parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/lambda0.9_patch{patch_size.default}_out{out_dim.default}_{arch.default[4:]}_fp{16 if fp16.default else 32}_batch{batch_size.default}_ours", type=str, help='Path to save logs and checkpoints.')
-    parser.add_argument('--saveckp_freq', default=20, type=int, help='Save checkpoint every x epochs.')
+    parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/ImageNet/Ours/Network_Checkpoints/mean_patch{patch_size.default}_out{out_dim.default}_{arch.default[4:]}_fp{16 if fp16.default else 32}_batch{batch_size.default}_ours_different_batch_augmentations", type=str, help='Path to save logs and checkpoints.')
+    parser.add_argument('--saveckp_freq', default=10, type=int, help='Save checkpoint every x epochs.')
     parser.add_argument('--seed', default=0, type=int, help='Random seed.')
-    parser.add_argument('--num_workers', default=4, type=int, help='Number of data loading workers per GPU.')
+    parser.add_argument('--num_workers', default=10, type=int, help='Number of data loading workers per GPU.')
     parser.add_argument("--dist_url", default="env://", type=str, help="""url used to set up
         distributed training; see https://pytorch.org/docs/stable/distributed.html""")
     parser.add_argument("--local_rank", default=0, type=int, help="Please ignore and do not set this argument.")
@@ -465,7 +465,7 @@ class DINOLoss(nn.Module):
                     # step_loss = loss_sum.sum()
 
                     # total_loss_mean += loss_sum.mean()
-                    # total_loss_sum += loss_sum.mean()
+                    total_loss_sum += loss_sum.mean()
                     # n_loss_terms += 1
 
                     #Method3 loss function (mean):
@@ -478,9 +478,9 @@ class DINOLoss(nn.Module):
                     #     total_loss_sum += lamda * loss_sum[0] * (len(loss_sum)-1) + (1-lamda)*(loss_sum[1:].sum())
 
                     #Method1 loss function:
-                    total_loss_sum += lamda * loss_sum[0] 
-                    if len(loss_sum) > 1:
-                        total_loss_sum += (1-lamda)*(loss_sum[1:].mean())
+                    # total_loss_sum += lamda * loss_sum[0] 
+                    # if len(loss_sum) > 1:
+                    #     total_loss_sum += (1-lamda)*(loss_sum[1:].mean())
                    
                     n_loss_terms += 1
         total_loss = total_loss_sum / n_loss_terms
