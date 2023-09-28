@@ -20,7 +20,7 @@ global_scale= 224
 local_scale= 96
 
 # Read image
-image = Image.open('C://Users//alija/Desktop/test.png').convert('RGB')
+image = Image.open('/home/alij/dino_mostafa/test.png').convert('RGB')
   
 # create an transform for crop the image
 flip_and_color_jitter = transforms.Compose([
@@ -63,8 +63,7 @@ local_transfo = transforms.Compose([
     normalize,
 ])
 ############################################################################################################
-patch_size = 16
-
+patch_size = 32
 #Global:
 global1 = augmented_crop(global_transfo1, image, patch_size=patch_size, global_scale=global_scale, local_scale=local_scale)
 global2 = augmented_crop(global_transfo2, image, patch_size=patch_size, global_scale=global_scale, local_scale=local_scale)
@@ -74,8 +73,8 @@ local1 = augmented_crop(local_transfo, image, patch_size=patch_size, global_scal
 local2 = augmented_crop(local_transfo, image, patch_size=patch_size, global_scale=global_scale, local_scale=local_scale)
 
 # c1 = correspondences(global1, global2)
-# correspondences(global1, local1, show_patches=True)
-# correspondences(global2, local2)
-c1 = correspondences(local1, local2, show_patches=True)
+c1 = correspondences(global1, local1, show_patches=True)
+# c1 = correspondences(global2, local2)
+# c1 = correspondences(local1, local2, show_patches=True)
 print(c1.selected_crop1_patches)
 print(c1.selected_crop2_patches)

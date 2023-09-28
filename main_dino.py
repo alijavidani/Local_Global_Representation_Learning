@@ -170,7 +170,7 @@ def collate_function(batch, additional_arg):
 
 
 os.environ["PL_TORCH_DISTRIBUTED_BACKEND"] = "nccl"
-os.environ["CUDA_VISIBLE_DEVICES"]="0,1,2,3"
+os.environ["CUDA_VISIBLE_DEVICES"]="1,2,3"
 
 def save_arguments_to_json(args, filename):
     arguments = vars(args)  # Get the arguments as a dictionary
@@ -190,7 +190,7 @@ def get_args_parser():
                 + torchvision_archs + torch.hub.list("facebookresearch/xcit:main"),
         help="""Name of architecture to train. For quick experiments with ViTs,
         we recommend using vit_tiny or vit_small.""")
-    patch_size = parser.add_argument('--patch_size', default=16, type=int, help="""Size in pixels
+    patch_size = parser.add_argument('--patch_size', default=8, type=int, help="""Size in pixels
         of input square patches - default 16 (for 16x16 patches). Using smaller
         values leads to better performance but requires more memory. Applies only
         for ViTs (vit_tiny, vit_small and vit_base). If <16, we recommend disabling
@@ -230,7 +230,7 @@ def get_args_parser():
     parser.add_argument('--clip_grad', type=float, default=3.0, help="""Maximal parameter
         gradient norm if using gradient clipping. Clipping with norm .3 ~ 1.0 can
         help optimization for larger ViT architectures. 0 for disabling.""")
-    batch_size = parser.add_argument('--batch_size_per_gpu', default=20, type=int,
+    batch_size = parser.add_argument('--batch_size_per_gpu', default=6, type=int,
         help='Per-GPU batch-size : number of distinct images loaded on one GPU.')######################
     parser.add_argument('--epochs', default=100, type=int, help='Number of epochs of training.')
     parser.add_argument('--freeze_last_layer', default=1, type=int, help="""Number of epochs

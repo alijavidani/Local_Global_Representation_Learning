@@ -1,11 +1,12 @@
 import torch
 import torchvision.transforms as transforms
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 from threading import Thread
 import vision_transformer as vits
 import utils 
 from vision_transformer import DINOHead
+import matplotlib.pyplot as plt
 
 def display(im):
     im.show()
@@ -66,10 +67,29 @@ class augmented_crop():
         
         self.patches_per_side = self.side_length // self.patch_size
 
+    # def draw_patches(self):
+    #     self.crop_with_patches = self.crop.copy()
+    #     shape1 = [(0, 0), (0, self.side_length)]
+    #     shape2 = [(0, 0), (self.side_length, 0)]
+
+    #     img1 = ImageDraw.Draw(self.crop_with_patches)
+    #     for i in range(self.patch_size, self.side_length, self.patch_size):
+    #         shape1[0] = (i, 0)
+    #         shape1[1] = (i, self.side_length)
+    #         shape2[0] = (0, i)
+    #         shape2[1] = (self.side_length, i)
+    #         img1.line(shape1, fill ="black", width = 2)
+    #         img1.line(shape2, fill ="black", width = 2)
+    #     return self.crop_with_patches
+
     def draw_patches(self):
         self.crop_with_patches = self.crop.copy()
         shape1 = [(0, 0), (0, self.side_length)]
         shape2 = [(0, 0), (self.side_length, 0)]
+        patch_number = 1  # Initialize the patch number
+
+        # You can customize the font and size here
+        font = ImageFont.load_default()
 
         img1 = ImageDraw.Draw(self.crop_with_patches)
         for i in range(self.patch_size, self.side_length, self.patch_size):
@@ -77,8 +97,25 @@ class augmented_crop():
             shape1[1] = (i, self.side_length)
             shape2[0] = (0, i)
             shape2[1] = (self.side_length, i)
-            img1.line(shape1, fill ="black", width = 2)
-            img1.line(shape2, fill ="black", width = 2)
+
+            # Draw lines
+            img1.line(shape1, fill="black", width=2)
+            img1.line(shape2, fill="black", width=2)
+
+        patch_number = 1  # Initialize the patch number
+        for j in range(0, self.side_length, self.patch_size):
+            for i in range(0, self.side_length, self.patch_size):
+                shape1[0] = (i, j)
+                shape1[1] = (i + self.patch_size, j)
+                shape2[0] = (i, j)
+                shape2[1] = (i, j + self.patch_size)
+
+                # Draw patch number
+                text_position = (i + self.patch_size // 2, j + self.patch_size // 2)
+                img1.text(text_position, str(patch_number), fill="black", font=font)
+
+                patch_number += 1  # Increment the patch number
+
         return self.crop_with_patches
 
     def find_coordinates(self, crop_properties):
@@ -202,20 +239,86 @@ class correspondences():
         selected_crop2_patches = list(selected_crop2_patches.flatten())
         return selected_crop1_patches, selected_crop2_patches
 
-
     def show_patches(self):
+        image1 = self.augmented_crop1.draw_patches()
+        image2 = self.augmented_crop2.draw_patches()
+    
+        # Get the original dimensions of both images
+        width1, height1 = image1.size
+        width2, height2 = image2.size
+
+        # Determine the maximum height among the two images
+        max_height = max(height1, height2)
+
+        # Create a new blank image with double the width and maximum height
+        combined_image = Image.new('RGB', (2 * width1, max_height))
+
+        # Paste the first image on the left side of the combined image
+        combined_image.paste(image1, (0, 0))
+
+        # Paste the second image on the right side of the combined image
+        combined_image.paste(image2, (width1+int(width1/4), int(height1/4)))
+
+        #save the combined image
+        combined_image.save('/home/alij/dino_mostafa/combined_image.png')
+
+        # Display the combined image using Matplotlib
+        # plt.imshow(combined_image)
+        # plt.axis('off')
+        # plt.show()
+
+
+    def show_patches3(self):
         crop1 = self.augmented_crop1.draw_patches()
         crop2 = self.augmented_crop2.draw_patches()
+        # Create a figure with two subplots
+        fig, axes = plt.subplots(1, 2, figsize=(12, 6))
 
-        t1=Thread(target=display,args=(crop1,))
-        t1.start()
-        t2=Thread(target=display,args=(crop2,))
-        t2.start()
+        # Plot the first image on the left subplot
+        axes[0].imshow(crop1)
+        axes[0].set_title("Image 1")
+        axes[0].axis('off')
 
-        if(self.intersection_coordinates is not None):
-            intersection_crop = self.augmented_crop1.original_image.crop((self.intersection_coordinates.left, self.intersection_coordinates.top, self.intersection_coordinates.right, self.intersection_coordinates.bottom))
-            t3=Thread(target=display,args=(intersection_crop,))
-            t3.start()
+        # Plot the second image on the right subplot
+        axes[1].imshow(crop2)
+        axes[1].set_title("Image 2")
+        axes[1].axis('off')
+
+        # Save the image
+        plt.savefig('side_by_side.png')
+
+        # Show the plot
+        # plt.show()
+
+    def show_patches2(self):
+        #for Linux:
+        crop1 = self.augmented_crop1.draw_patches()
+        crop2 = self.augmented_crop2.draw_patches()
+        crop1.save('/home/alij/dino_mostafa/crop1.png')
+        crop2.save('/home/alij/dino_mostafa/crop2.png')
+        # t1=Thread(target=display,args=(crop1,))
+        # t1.start()
+        # t2=Thread(target=display,args=(crop2,))
+        # t2.start()
+
+        # if(self.intersection_coordinates is not None):
+        #     intersection_crop = self.augmented_crop1.original_image.crop((self.intersection_coordinates.left, self.intersection_coordinates.top, self.intersection_coordinates.right, self.intersection_coordinates.bottom))
+        #     t3=Thread(target=display,args=(intersection_crop,))
+        #     t3.start()
+
+        # for Windows:
+        # crop1 = self.augmented_crop1.draw_patches()
+        # crop2 = self.augmented_crop2.draw_patches()
+
+        # t1=Thread(target=display,args=(crop1,))
+        # t1.start()
+        # t2=Thread(target=display,args=(crop2,))
+        # t2.start()
+
+        # if(self.intersection_coordinates is not None):
+        #     intersection_crop = self.augmented_crop1.original_image.crop((self.intersection_coordinates.left, self.intersection_coordinates.top, self.intersection_coordinates.right, self.intersection_coordinates.bottom))
+        #     t3=Thread(target=display,args=(intersection_crop,))
+        #     t3.start()
 
 ############################################################################################################
 # How to use the above classes:
