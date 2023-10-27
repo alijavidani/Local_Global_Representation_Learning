@@ -33,10 +33,149 @@ from torchvision import models as torchvision_models
 import utils
 import vision_transformer as vits
 from vision_transformer import DINOHead
-from augment import augmented_crop, Coordinates
+from augment import augmented_crop, correspondences
+import math
+from functools import partial
+import matplotlib.pyplot as plt
+import random
+import warnings
+warnings.filterwarnings("ignore")
 
-# import os
-os.environ["PL_TORCH_DISTRIBUTED_BACKEND"] = "gloo"
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+
+def show_batch_images(images, batch_size):
+    fig = plt.figure(figsize=(8, 8))
+    columns = batch_size
+    rows = 10
+    for i in range(1, columns+1):
+        for j in range(1, rows+1):
+            fig.add_subplot(rows, columns, (j-1)*columns + (i))
+            plt.imshow(images[j-1][i-1].permute(1, 2, 0))
+    # plt.show()
+    plt.savefig('foo.png')
+
+
+def DataAugmentationDINO(args, image, seed):
+    flip_and_color_jitter = transforms.Compose([
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.RandomApply(
+        [transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1)],
+        p=0.8
+    ),
+    transforms.RandomGrayscale(p=0.2),
+    ])
+    normalize = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+    ])
+
+    # first global crop
+    global_transfo1 = transforms.Compose([
+        transforms.RandomResizedCrop(224, scale=args.global_crops_scale, interpolation=Image.BICUBIC),
+        flip_and_color_jitter,
+        utils.GaussianBlur(1.0),
+        normalize,
+    ])
+    # second global crop
+    global_transfo2 = transforms.Compose([
+        transforms.RandomResizedCrop(224, scale=args.global_crops_scale, interpolation=Image.BICUBIC),
+        flip_and_color_jitter,
+        utils.GaussianBlur(0.1),
+        utils.Solarization(0.2),
+        normalize,
+    ])
+    # transformation for the local small crops
+    local_transfo = transforms.Compose([
+        transforms.RandomResizedCrop(96, scale=args.local_crops_scale, interpolation=Image.BICUBIC),
+        flip_and_color_jitter,
+        utils.GaussianBlur(p=0.5),
+        normalize,
+    ])
+
+    resize_original_image_transform = transforms.Resize((256,256))
+    image = resize_original_image_transform(image)
+    # print(image.size)
+    set_seed(seed)
+    global1 = augmented_crop(global_transfo1, image, patch_size=args.patch_size, global_scale=args.global_scale, local_scale=args.local_scale)
+
+    set_seed(seed+1)
+    global2 = augmented_crop(global_transfo2, image, patch_size=args.patch_size, global_scale=args.global_scale, local_scale=args.local_scale)
+
+    local_augmented_crops = [] 
+    for j in range(args.local_crops_number):
+        set_seed(seed+2+j)
+        local_augmented_crops.append(augmented_crop(local_transfo, image, patch_size=args.patch_size, global_scale=args.global_scale, local_scale=args.local_scale))
+
+    augmented_crops = [global1, global2] + local_augmented_crops
+    return augmented_crops
+
+# def custom_collate(data):
+#     augmented_crops = []
+#     labels = []
+
+#     for i in range(len(data)):
+#         augmented_crops.append(data[i][0])
+#         labels.append(data[i][1])
+#     return augmented_crops, labels
+
+# @profile
+def collate_function(batch, additional_arg):
+    process_seed = random.randint(0, 1000000)
+
+    # Separate the samples and targets
+    samples, targets = zip(*batch)
+
+    # Apply augmentations to each sample within the batch
+    augmented_samples = []
+
+    for i, sample in enumerate(samples):
+        augmented_sample = DataAugmentationDINO(additional_arg, sample, process_seed)
+        augmented_samples.append(augmented_sample)
+    # show_images(augmented_samples, additional_arg.batch_size_per_gpu)
+    
+    # Decompose data:
+    images =[
+        torch.empty((len(augmented_samples),3,args.global_scale,args.global_scale)),torch.empty((len(augmented_samples),3,args.global_scale,args.global_scale)),
+        torch.empty((len(augmented_samples),3,args.local_scale,args.local_scale)),torch.empty((len(augmented_samples),3,args.local_scale,args.local_scale)),
+        torch.empty((len(augmented_samples),3,args.local_scale,args.local_scale)),torch.empty((len(augmented_samples),3,args.local_scale,args.local_scale)),
+        torch.empty((len(augmented_samples),3,args.local_scale,args.local_scale)),torch.empty((len(augmented_samples),3,args.local_scale,args.local_scale)),
+        torch.empty((len(augmented_samples),3,args.local_scale,args.local_scale)),torch.empty((len(augmented_samples),3,args.local_scale,args.local_scale)),
+    ]
+    for i in range(len(augmented_samples[0])):
+        for j in range(len(augmented_samples)):
+            images[i][j] = augmented_samples[j][i].crop_tensor_normed.detach().clone()
+
+    corrs = [[None for _ in range(additional_arg.global_crops_number + additional_arg.local_crops_number)] for _ in range(additional_arg.global_crops_number)]
+
+    # Calculate patch correspondences for the last image in the batch
+    # which is also equal to other images in the batch:
+
+    for iq in range(additional_arg.global_crops_number):
+        for v in range(additional_arg.global_crops_number + additional_arg.local_crops_number):
+            if v == iq:
+                # we skip cases where student and teacher operate on the same view
+                continue
+
+            corrs[iq][v] = correspondences(augmented_sample[iq], augmented_sample[v])
+    
+    # Return the augmented samples, correspondences, and targets as a batch
+    return images, corrs, targets
+
+
+os.environ["PL_TORCH_DISTRIBUTED_BACKEND"] = "nccl"
+os.environ["CUDA_VISIBLE_DEVICES"]="1,2,3"
+
+def save_arguments_to_json(args, filename):
+    arguments = vars(args)  # Get the arguments as a dictionary
+    with open(filename, 'w') as f:
+        json.dump(arguments, f, indent=4)
 
 torchvision_archs = sorted(name for name in torchvision_models.__dict__
     if name.islower() and not name.startswith("__")
@@ -46,17 +185,17 @@ def get_args_parser():
     parser = argparse.ArgumentParser('DINO', add_help=False)
 
     # Model parameters
-    parser.add_argument('--arch', default='vit_tiny', type=str,
+    arch = parser.add_argument('--arch', default='vit_base', type=str,
         choices=['vit_tiny', 'vit_small', 'vit_base', 'xcit', 'deit_tiny', 'deit_small'] \
                 + torchvision_archs + torch.hub.list("facebookresearch/xcit:main"),
         help="""Name of architecture to train. For quick experiments with ViTs,
         we recommend using vit_tiny or vit_small.""")
-    parser.add_argument('--patch_size', default=16, type=int, help="""Size in pixels
+    patch_size = parser.add_argument('--patch_size', default=8, type=int, help="""Size in pixels
         of input square patches - default 16 (for 16x16 patches). Using smaller
         values leads to better performance but requires more memory. Applies only
         for ViTs (vit_tiny, vit_small and vit_base). If <16, we recommend disabling
-        mixed precision training (--use_fp16 false) to avoid unstabilities.""")
-    parser.add_argument('--out_dim', default=65536, type=int, help="""Dimensionality of
+        mixed precision training (--use_fp16 false) to avoid unstabilities.""") #################
+    out_dim = parser.add_argument('--out_dim', default=10000, type=int, help="""Dimensionality of
         the DINO head output. For complex and large datasets large values (like 65k) work well.""")
     parser.add_argument('--norm_last_layer', default=True, type=utils.bool_flag,
         help="""Whether or not to weight normalize the last layer of the DINO head.
@@ -79,7 +218,7 @@ def get_args_parser():
         help='Number of warmup epochs for the teacher temperature (Default: 30).')
 
     # Training/Optimization parameters
-    parser.add_argument('--use_fp16', type=utils.bool_flag, default=True, help="""Whether or not
+    fp16 = parser.add_argument('--use_fp16', type=utils.bool_flag, default=True, help="""Whether or not
         to use half precision for training. Improves training time and memory requirements,
         but can provoke instability and slight decay of performance. We recommend disabling
         mixed precision if the loss is unstable, if reducing the patch size or if training with bigger ViTs.""")
@@ -91,8 +230,8 @@ def get_args_parser():
     parser.add_argument('--clip_grad', type=float, default=3.0, help="""Maximal parameter
         gradient norm if using gradient clipping. Clipping with norm .3 ~ 1.0 can
         help optimization for larger ViT architectures. 0 for disabling.""")
-    parser.add_argument('--batch_size_per_gpu', default=4, type=int,
-        help='Per-GPU batch-size : number of distinct images loaded on one GPU.')
+    batch_size = parser.add_argument('--batch_size_per_gpu', default=6, type=int,
+        help='Per-GPU batch-size : number of distinct images loaded on one GPU.')######################
     parser.add_argument('--epochs', default=100, type=int, help='Number of epochs of training.')
     parser.add_argument('--freeze_last_layer', default=1, type=int, help="""Number of epochs
         during which we keep the output layer fixed. Typically doing so during
@@ -109,6 +248,8 @@ def get_args_parser():
     parser.add_argument('--drop_path_rate', type=float, default=0.1, help="stochastic depth rate")
 
     # Multi-crop parameters
+    parser.add_argument('--global_crops_number', type=int, default=2, help="""Number of big
+        global views to generate.""")
     parser.add_argument('--global_crops_scale', type=float, nargs='+', default=(0.4, 1.),
         help="""Scale range of the cropped image before resizing, relatively to the origin image.
         Used for large global view cropping. When disabling multi-crop (--local_crops_number 0), we
@@ -121,15 +262,25 @@ def get_args_parser():
         Used for small local view cropping of multi-crop.""")
 
     # Misc
-    parser.add_argument('--data_path', default='F:\PhD\Datasets\cifar-10-batches-py\pixel_data_label_train', type=str,
+    # ImageNet path: /amin/imagenet/imagenet/train
+    # Cifar10 path:/home/alij/Datasets/Cifar10/train
+    # Imagenet100 path: /home/alij/Datasets/Imagenet100/train
+
+    parser.add_argument('--data_path', default='/home/alij/Datasets/Imagenet100/train', type=str,
         help='Please specify path to the ImageNet training data.')
-    parser.add_argument('--output_dir', default=".\outputs", type=str, help='Path to save logs and checkpoints.')
+    parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Imagenet100/Ours/Network_Checkpoints/mean_patch{patch_size.default}_out{out_dim.default}_{arch.default[4:]}_fp{16 if fp16.default else 32}_batch{batch_size.default}_ours_same_batch_augmentation_with_resize", type=str, help='Path to save logs and checkpoints.')
+    # parser.add_argument('--output_dir', default=f"/home/alij/RESULTS/Cifar10/Ours/Network_Checkpoints/ali_batch40_on_cpu", type=str, help='Path to save logs and checkpoints.')
     parser.add_argument('--saveckp_freq', default=20, type=int, help='Save checkpoint every x epochs.')
     parser.add_argument('--seed', default=0, type=int, help='Random seed.')
-    parser.add_argument('--num_workers', default=0, type=int, help='Number of data loading workers per GPU.')
+    parser.add_argument('--num_workers', default=8, type=int, help='Number of data loading workers per GPU.')
     parser.add_argument("--dist_url", default="env://", type=str, help="""url used to set up
         distributed training; see https://pytorch.org/docs/stable/distributed.html""")
     parser.add_argument("--local_rank", default=0, type=int, help="Please ignore and do not set this argument.")
+
+    # My added arguments:
+    parser.add_argument("--global_scale", default=224, type=int, help="size of upsampled image after crop to be fed to the teacher")
+    parser.add_argument("--local_scale", default=96, type=int, help="size of upsampled image after crop to be fed to the student")
+
     return parser
 
 
@@ -141,13 +292,11 @@ def train_dino(args):
     cudnn.benchmark = True
 
     # ============ preparing data ... ============
-    transform = DataAugmentationDINO(
-        args.global_crops_scale,
-        args.local_crops_scale,
-        args.local_crops_number,
-    )
-    dataset = datasets.ImageFolder(args.data_path, transform=transform)
+
+    dataset = datasets.ImageFolder(args.data_path, transform=None)
     sampler = torch.utils.data.DistributedSampler(dataset, shuffle=True)
+    partial_collate_fn = partial(collate_function, additional_arg=args)
+
     data_loader = torch.utils.data.DataLoader(
         dataset,
         sampler=sampler,
@@ -155,6 +304,7 @@ def train_dino(args):
         num_workers=args.num_workers,
         pin_memory=True,
         drop_last=True,
+        collate_fn=partial_collate_fn
     )
     print(f"Data loaded: there are {len(dataset)} images.")
 
@@ -217,6 +367,7 @@ def train_dino(args):
 
     # ============ preparing loss ... ============
     dino_loss = DINOLoss(
+        args.patch_size,
         args.out_dim,
         args.local_crops_number + 2,  # total number of crops = 2 global crops + local_crops_number
         args.warmup_teacher_temp,
@@ -301,13 +452,15 @@ def train_dino(args):
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
 
-
+# @profile
 def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loader,
                     optimizer, lr_schedule, wd_schedule, momentum_schedule,epoch,
                     fp16_scaler, args):
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Epoch: [{}/{}]'.format(epoch, args.epochs)
-    for it, (images, _) in enumerate(metric_logger.log_every(data_loader, 10, header)):
+    for it, (images, corrs, _) in enumerate(metric_logger.log_every(data_loader, 10, header)):
+        # show_batch_images(data, args.batch_size_per_gpu)
+
         # update weight decay and learning rate according to their schedule
         it = len(data_loader) * epoch + it  # global training iteration
         for i, param_group in enumerate(optimizer.param_groups):
@@ -319,9 +472,9 @@ def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loade
         images = [im.cuda(non_blocking=True) for im in images]
         # teacher and student forward passes + compute dino loss
         with torch.cuda.amp.autocast(fp16_scaler is not None):
-            teacher_output = teacher(images[:2])  # only the 2 global views pass through the teacher
-            student_output = student(images)
-            loss = dino_loss(student_output, teacher_output, epoch)
+            teacher_output = teacher(images[:2], args.batch_size_per_gpu, args.local_crops_number, args.patch_size, args.global_scale, args.local_scale)  # only the 2 global views pass through the teacher
+            student_output1, student_output2 = student(images, args.batch_size_per_gpu, args.local_crops_number, args.patch_size, args.global_scale, args.local_scale)
+            loss = dino_loss(student_output1, student_output2, teacher_output, corrs, epoch)
 
         if not math.isfinite(loss.item()):
             print("Loss is {}, stopping training".format(loss.item()), force=True)
@@ -365,14 +518,14 @@ def train_one_epoch(student, teacher, teacher_without_ddp, dino_loss, data_loade
 
 
 class DINOLoss(nn.Module):
-    def __init__(self, out_dim, ncrops, warmup_teacher_temp, teacher_temp,
+    def __init__(self, patch_size, out_dim, ncrops, warmup_teacher_temp, teacher_temp,
                  warmup_teacher_temp_epochs, nepochs, student_temp=0.1,
                  center_momentum=0.9):
         super().__init__()
         self.student_temp = student_temp
         self.center_momentum = center_momentum
         self.ncrops = ncrops
-        self.register_buffer("center", torch.zeros(1, out_dim))
+        self.register_buffer("center", torch.zeros(1, pow(int(224/patch_size),2) + 1, out_dim))#
         # we apply a warm up for the teacher temperature because
         # a too high temperature makes the training instable at the beginning
         self.teacher_temp_schedule = np.concatenate((
@@ -381,33 +534,84 @@ class DINOLoss(nn.Module):
             np.ones(nepochs - warmup_teacher_temp_epochs) * teacher_temp
         ))
 
-    def forward(self, student_output, teacher_output, epoch):
+    def forward(self, student_output1, student_output2, teacher_output, corrs, epoch):
         """
         Cross-entropy between softmax outputs of the teacher and student networks.
         """
-        student_out = student_output / self.student_temp
-        student_out = student_out.chunk(self.ncrops)
+        student_out1 = student_output1 / self.student_temp
+        student_out1 = student_out1.chunk(2)
 
+        student_out2 = student_output2 / self.student_temp
+        student_out2 = student_out2.chunk(self.ncrops-2)
+        
         # teacher centering and sharpening
         temp = self.teacher_temp_schedule[epoch]
         teacher_out = F.softmax((teacher_output - self.center) / temp, dim=-1)
         teacher_out = teacher_out.detach().chunk(2)
 
         total_loss = 0
-        n_loss_terms = 0
+        total_loss_sum1 = 0
+        total_loss_sum2 = 0
+        n_loss_terms1 = 0
+        n_loss_terms2 = 0
+        lamda = 0.9
+
         for iq, q in enumerate(teacher_out):
-            for v in range(len(student_out)):
+            for v in range(len(student_out1)):
                 if v == iq:
                     # we skip cases where student and teacher operate on the same view
                     continue
-                student_out_softmax = F.log_softmax(student_out[v], dim=-1)
-                cross_entropy_loss = -q * student_out_softmax
-                loss_sum = torch.sum(cross_entropy_loss, dim=-1)
-                total_loss += loss_sum.mean()
-                n_loss_terms += 1
-        total_loss /= n_loss_terms
+
+                tensor1 = teacher_out[iq][:, corrs[iq][v].selected_crop1_patches, :]
+                tensor2 = student_out1[v][:, corrs[iq][v].selected_crop2_patches, :]
+
+                # Calculate Loss:
+                tensor2_softmax = F.log_softmax(tensor2, dim=-1)
+                cross_entropy_loss = - tensor1 * tensor2_softmax
+                loss_sum1 = torch.sum(cross_entropy_loss, dim=-1)
+
+                total_loss_sum1 += loss_sum1.mean()
+
+                #Lambda loss function:
+                # total_loss_sum += lamda * loss_sum[0] 
+                # if len(loss_sum) > 1:
+                #     total_loss_sum += (1-lamda)*(loss_sum[1:].mean())
+                
+                n_loss_terms1 += 1
+
+
+        for iq, q in enumerate(teacher_out):
+            for v in range(len(student_out2)):
+                tensor1 = teacher_out[iq][:, corrs[iq][v+2].selected_crop1_patches, :]
+                tensor2 = student_out2[v][:, corrs[iq][v+2].selected_crop2_patches, :]
+
+                # Calculate Loss:
+                tensor2_softmax = F.log_softmax(tensor2, dim=-1)
+                cross_entropy_loss = - tensor1 * tensor2_softmax
+                loss_sum2 = torch.sum(cross_entropy_loss, dim=-1)
+
+                total_loss_sum2 += loss_sum2.mean()
+
+                #Lambda loss function:
+                # total_loss_sum += lamda * loss_sum[0] 
+                # if len(loss_sum) > 1:
+                #     total_loss_sum += (1-lamda)*(loss_sum[1:].mean())
+                
+                n_loss_terms2 += 1
+
+        total_loss = (total_loss_sum1 + total_loss_sum2) / (n_loss_terms1 + n_loss_terms2)
+
         self.update_center(teacher_output)
         return total_loss
+
+        # Original Dino Loss Function:
+        # student_out_softmax = F.log_softmax(student_out[v], dim=-1)
+        # cross_entropy_loss = -q * student_out_softmax
+        # loss_sum = torch.sum(cross_entropy_loss, dim=-1)
+        # total_loss += loss_sum.mean()
+        # total_loss /= n_loss_terms
+        # self.update_center(teacher_output)
+        # return total_loss
 
     @torch.no_grad()
     def update_center(self, teacher_output):
@@ -422,56 +626,10 @@ class DINOLoss(nn.Module):
         self.center = self.center * self.center_momentum + batch_center * (1 - self.center_momentum)
 
 
-class DataAugmentationDINO(object):
-    def __init__(self, global_crops_scale, local_crops_scale, local_crops_number):
-        flip_and_color_jitter = transforms.Compose([
-            transforms.RandomHorizontalFlip(p=0.5),
-            transforms.RandomApply(
-                [transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1)],
-                p=0.8
-            ),
-            transforms.RandomGrayscale(p=0.2),
-        ])
-        normalize = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-        ])
-
-        # first global crop
-        self.global_transfo1 = transforms.Compose([
-            transforms.RandomResizedCrop(224, scale=global_crops_scale, interpolation=Image.BICUBIC),
-            flip_and_color_jitter,
-            utils.GaussianBlur(1.0),
-            normalize,
-        ])
-        # second global crop
-        self.global_transfo2 = transforms.Compose([
-            transforms.RandomResizedCrop(224, scale=global_crops_scale, interpolation=Image.BICUBIC),
-            flip_and_color_jitter,
-            utils.GaussianBlur(0.1),
-            utils.Solarization(0.2),
-            normalize,
-        ])
-        # transformation for the local small crops
-        self.local_crops_number = local_crops_number
-        self.local_transfo = transforms.Compose([
-            transforms.RandomResizedCrop(96, scale=local_crops_scale, interpolation=Image.BICUBIC),
-            flip_and_color_jitter,
-            utils.GaussianBlur(p=0.5),
-            normalize,
-        ])
-
-    def __call__(self, image):
-        crops = []
-        crops.append(self.global_transfo1(image))
-        crops.append(self.global_transfo2(image))
-        for _ in range(self.local_crops_number):
-            crops.append(self.local_transfo(image))
-        return crops
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('DINO', parents=[get_args_parser()])
     args = parser.parse_args()
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+    # Save the arguments to a JSON file
+    save_arguments_to_json(args, os.path.join(args.output_dir,'arguments.json'))
     train_dino(args)

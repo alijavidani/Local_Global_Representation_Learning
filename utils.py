@@ -486,7 +486,7 @@ def init_distributed_mode(args):
         sys.exit(1)
 
     dist.init_process_group(
-        backend="gloo",
+        backend="nccl",
         init_method=args.dist_url,
         world_size=args.world_size,
         rank=args.rank,
@@ -607,7 +607,7 @@ class MultiCropWrapper(nn.Module):
         self.backbone = backbone
         self.head = head
 
-    def forward(self, x):
+    def forward(self, x, batch_size_per_gpu, local_crops_number, patch_size, global_scale, local_scale):
         # convert to list
         if not isinstance(x, list):
             x = [x]
@@ -622,6 +622,15 @@ class MultiCropWrapper(nn.Module):
             # https://github.com/facebookresearch/xcit/blob/master/xcit.py#L404-L405
             if isinstance(_out, tuple):
                 _out = _out[0]
+
+            if _out.shape[1] == pow(int(local_scale/patch_size),2)+1:
+                output1 = output
+                output2 = _out
+                return self.head(output1), self.head(output2)
+                # zeros_tensor = torch.zeros([batch_size_per_gpu*local_crops_number, ((pow(int(global_scale/patch_size),2)+1)-(pow(int(local_scale/patch_size),2)+1)), _out.shape[2]]).to(x[0].device)
+                # zeros_tensor = torch.empty([32, 160, 192]).to(x[0].device)
+                # _out = torch.cat((_out, zeros_tensor), dim=1)
+
             # accumulate outputs
             output = torch.cat((output, _out))
             start_idx = end_idx
