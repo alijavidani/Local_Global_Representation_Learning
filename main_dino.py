@@ -600,7 +600,7 @@ class DINOLoss(nn.Module):
                 n_loss_terms2 += 1
 
         total_loss = (total_loss_sum1 + total_loss_sum2) / (n_loss_terms1 + n_loss_terms2)
-                
+
         self.update_center(teacher_output)
         return total_loss
 
