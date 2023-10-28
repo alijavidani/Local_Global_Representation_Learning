@@ -20,12 +20,12 @@ import os
 import uuid
 from pathlib import Path
 
-import main_dino
+import patch_wise_dino
 import submitit
 
 
 def parse_args():
-    parser = argparse.ArgumentParser("Submitit for DINO", parents=[main_dino.get_args_parser()])
+    parser = argparse.ArgumentParser("Submitit for Patch-Wise DINO", parents=[patch_wise_dino.get_args_parser()])
     parser.add_argument("--ngpus", default=8, type=int, help="Number of gpus to request on each node")
     parser.add_argument("--nodes", default=2, type=int, help="Number of nodes to request")
     parser.add_argument("--timeout", default=2800, type=int, help="Duration of the job")
@@ -60,10 +60,10 @@ class Trainer(object):
         self.args = args
 
     def __call__(self):
-        import main_dino
+        import patch_wise_dino
 
         self._setup_gpu_args()
-        main_dino.train_dino(self.args)
+        patch_wise_dino.train_dino(self.args)
 
     def checkpoint(self):
         import os

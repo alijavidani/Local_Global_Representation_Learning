@@ -67,21 +67,6 @@ class augmented_crop():
         
         self.patches_per_side = self.side_length // self.patch_size
 
-    # def draw_patches(self):
-    #     self.crop_with_patches = self.crop.copy()
-    #     shape1 = [(0, 0), (0, self.side_length)]
-    #     shape2 = [(0, 0), (self.side_length, 0)]
-
-    #     img1 = ImageDraw.Draw(self.crop_with_patches)
-    #     for i in range(self.patch_size, self.side_length, self.patch_size):
-    #         shape1[0] = (i, 0)
-    #         shape1[1] = (i, self.side_length)
-    #         shape2[0] = (0, i)
-    #         shape2[1] = (self.side_length, i)
-    #         img1.line(shape1, fill ="black", width = 2)
-    #         img1.line(shape2, fill ="black", width = 2)
-    #     return self.crop_with_patches
-
     def draw_patches(self):
         self.crop_with_patches = self.crop.copy()
         shape1 = [(0, 0), (0, self.side_length)]
@@ -157,7 +142,6 @@ class correspondences():
 
         # if self.intersection_coordinates is None:
         #     self.show_patches()
-        #     print('khr')
 
         if show_patches:
             self.show_patches()
@@ -260,7 +244,7 @@ class correspondences():
         combined_image.paste(image2, (width1+int(width1/4), int(height1/4)))
 
         #save the combined image
-        combined_image.save('/home/alij/dino_mostafa/combined_image.png')
+        combined_image.save('./result.png')
 
         # Display the combined image using Matplotlib
         # plt.imshow(combined_image)
@@ -268,7 +252,7 @@ class correspondences():
         # plt.show()
 
 
-    def show_patches3(self):
+    def show_patches2(self):
         crop1 = self.augmented_crop1.draw_patches()
         crop2 = self.augmented_crop2.draw_patches()
         # Create a figure with two subplots
@@ -290,12 +274,12 @@ class correspondences():
         # Show the plot
         # plt.show()
 
-    def show_patches2(self):
+    def show_patches3(self):
         #for Linux:
         crop1 = self.augmented_crop1.draw_patches()
         crop2 = self.augmented_crop2.draw_patches()
-        crop1.save('/home/alij/dino_mostafa/crop1.png')
-        crop2.save('/home/alij/dino_mostafa/crop2.png')
+        crop1.save('./crop1.png')
+        crop2.save('./crop2.png')
         # t1=Thread(target=display,args=(crop1,))
         # t1.start()
         # t2=Thread(target=display,args=(crop2,))
