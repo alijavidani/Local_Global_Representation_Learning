@@ -10,7 +10,7 @@ PyTorch implementation for Patch-Wise DINO. For details, see **Local-Global Self
 ## Training
 
 ### Documentation
-Please install [PyTorch](https://pytorch.org/) and download the [Cifar10](https://www.cs.toronto.edu/~kriz/cifar.html), [ImageNet-100](https://www.kaggle.com/datasets/ambityga/imagenet100), and [ImageNet-1K](https://imagenet.stanford.edu/) dataset. This codebase has been developed with python version 3.10, PyTorch version ..0.1, CUDA 12.0 and torchvision 0.15.2. After activating the virtual environment, please copy the transforms.py inside the repository into the virtual_env/Lib/site-packages/torchvision/transforms/transforms.py. For a glimpse at the arguments of the proposed Patch-Wise DINO framework training please run:
+This codebase has been developed on top of the official [DINO](https://github.com/facebookresearch/dino/) implementation. Please install [PyTorch](https://pytorch.org/) and download the [Cifar10](https://www.cs.toronto.edu/~kriz/cifar.html), [ImageNet-100](https://www.kaggle.com/datasets/ambityga/imagenet100), and [ImageNet-1K](https://imagenet.stanford.edu/) dataset. It has been developed with python version 3.10, PyTorch version ..0.1, CUDA 12.0 and torchvision 0.15.2. After activating the virtual environment, please copy the transforms.py inside the repository into the virtual_env/Lib/site-packages/torchvision/transforms/transforms.py. For a glimpse at the arguments of the proposed Patch-Wise DINO framework training please run:
 ```
 python patch_wise_dino.py --help
 ```
