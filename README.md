@@ -4,13 +4,13 @@ PyTorch implementation for Patch-Wise DINO. For details, see **Local-Global Self
  [[`arXiv`](https://arxiv.org/abs/2104.14294)]
 
 <div align="center">
-  <img width="100%" alt="DINO illustration" src="./github/Patch-Wise DINO.gif">
+  <img width="100%" alt="DINO illustration" src="./.github/Patch-Wise DINO.gif">
 </div>
 
 ## Training
 
 ### Documentation
-Please install [PyTorch](https://pytorch.org/) and download the [Cifar10](https://www.cs.toronto.edu/~kriz/cifar.html), [ImageNet-100](https://www.kaggle.com/datasets/ambityga/imagenet100), and [ImageNet-1K](https://imagenet.stanford.edu/) dataset. This codebase has been developed with python version 3.6, PyTorch version 1.7.1, CUDA 11.0 and torchvision 0.8.2. After activating the virtual environment, please copy the transforms.py inside the repository into the virtual_env/Lib/site-packages/torchvision/transforms/transforms.py. For a glimpse at the arguments of the proposed Patch-Wise DINO framework training please run:
+Please install [PyTorch](https://pytorch.org/) and download the [Cifar10](https://www.cs.toronto.edu/~kriz/cifar.html), [ImageNet-100](https://www.kaggle.com/datasets/ambityga/imagenet100), and [ImageNet-1K](https://imagenet.stanford.edu/) dataset. This codebase has been developed with python version 3.10, PyTorch version ..0.1, CUDA 12.0 and torchvision 0.15.2. After activating the virtual environment, please copy the transforms.py inside the repository into the virtual_env/Lib/site-packages/torchvision/transforms/transforms.py. For a glimpse at the arguments of the proposed Patch-Wise DINO framework training please run:
 ```
 python patch_wise_dino.py --help
 ```
@@ -86,11 +86,11 @@ torchrun --use_env --nproc_per_node=1 eval_copy_detection.py --data_path /path/t
 
 ### Patch-Matching
 To see the result of the patch-matching algorithm:
-upload your image with the name test.png and run:
+upload your image with the name test.png in the directory of the repository and run:
 ```
 python patch_matching.py
 ```
-It generates an image in the directory of the repository with the name result.png and prints the corresponding patches in the console.
+It generates an image in same directory with the name result.png and prints the corresponding patches in the console.
 
 ## Citation
 If you find this repository useful, please consider giving a star :star: and citation :t-rex::
