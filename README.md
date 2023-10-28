@@ -37,26 +37,6 @@ To train a supervised linear classifier on frozen weights on a single node with 
 torchrun --nproc_per_node=4 eval_linear.py --data_path /path/to/imagenet
 ```
 
-## Evaluation: DAVIS 2017 Video object segmentation
-Please verify that you're using pytorch version 1.7.1 since we are not able to reproduce the results with most recent pytorch 1.8.1 at the moment.
-
-**Step 1: Prepare DAVIS 2017 data**  
-```
-cd $HOME
-git clone https://github.com/davisvideochallenge/davis-2017 && cd davis-2017
-./data/get_davis.sh
-```
-
-**Step 2: Video object segmentation**  
-```
-python eval_video_segmentation.py --data_path $HOME/davis-2017/DAVIS/ --output_dir /path/to/saving_dir
-```
-
-**Step 3: Evaluate the obtained segmentation**  
-```
-git clone https://github.com/davisvideochallenge/davis2017-evaluation $HOME/davis2017-evaluation
-python $HOME/davis2017-evaluation/evaluation_method.py --task semi-supervised --results_path /path/to/saving_dir --davis_path $HOME/davis-2017/DAVIS/
-```
 
 ## Evaluation: Image Retrieval on revisited Oxford and Paris
 Step 1: Prepare revisited Oxford and Paris by following [this repo](https://github.com/filipradenovic/revisitop).
@@ -73,6 +53,7 @@ Oxford:
 torchrun --use_env --nproc_per_node=1 eval_image_retrieval.py --imsize 224 --multiscale 0 --data_path /path/to/revisited_paris_oxford/ --dataset roxford5k
 ```
 
+
 ## Evaluation: Copy detection on Copydays
 Step 1: Prepare [Copydays dataset](https://lear.inrialpes.fr/~jegou/data.php#copydays).
 
@@ -84,6 +65,7 @@ Step 3: Run copy detection:
 torchrun --use_env --nproc_per_node=1 eval_copy_detection.py --data_path /path/to/copydays/ --whitening_path /path/to/whitening_data/ --distractors_path /path/to/distractors/
 ```
 
+
 ### Patch-Matching
 To see the result of the patch-matching algorithm:
 upload your image with the name test.png in the directory of the repository and run:
@@ -91,6 +73,7 @@ upload your image with the name test.png in the directory of the repository and 
 python patch_matching.py
 ```
 It generates an image in same directory with the name result.png and prints the corresponding patches in the console.
+
 
 ## Citation
 If you find this repository useful, please consider giving a star :star: and citation :t-rex::
