@@ -1,7 +1,7 @@
 # Local-Global Self-Supervised Visual Representation Learning
 
 PyTorch implementation for Patch-Wise DINO. For details, see **Local-Global Self-Supervised Visual Representation Learning**.  
- [[`arXiv`](https://arxiv.org/abs/2104.14294)]
+ [[`arXiv`](http://arxiv.org/abs/2310.18651)]
 
 <div align="center">
   <img width="100%" alt="DINO illustration" src="./.github/Patch-Wise DINO.gif">
@@ -10,7 +10,7 @@ PyTorch implementation for Patch-Wise DINO. For details, see **Local-Global Self
 ## Training
 
 ### Documentation
-This codebase has been developed on top of the official [DINO](https://github.com/facebookresearch/dino/) implementation. Please install [PyTorch](https://pytorch.org/) and download the [Cifar10](https://www.cs.toronto.edu/~kriz/cifar.html), [ImageNet-100](https://www.kaggle.com/datasets/ambityga/imagenet100), and [ImageNet-1K](https://imagenet.stanford.edu/) dataset. It has been developed with python version 3.10, PyTorch version ..0.1, CUDA 12.0 and torchvision 0.15.2. After activating the virtual environment, please copy the transforms.py inside the repository into the virtual_env/Lib/site-packages/torchvision/transforms/transforms.py. For a glimpse at the arguments of the proposed Patch-Wise DINO framework training please run:
+This codebase has been developed on top of the official [DINO](https://github.com/facebookresearch/dino/) implementation. Please install [PyTorch](https://pytorch.org/) and download the [Cifar10](https://www.cs.toronto.edu/~kriz/cifar.html), [ImageNet-100](https://www.kaggle.com/datasets/ambityga/imagenet100), and [ImageNet-1K](https://imagenet.stanford.edu/) dataset. It has been developed with python version 3.10, PyTorch version 2.0.1, CUDA 12.0 and torchvision 0.15.2. After activating the virtual environment, please copy the transforms.py inside the repository into the virtual_env/Lib/site-packages/torchvision/transforms/transforms.py. For a glimpse at the arguments of the proposed Patch-Wise DINO framework training please run:
 ```
 python patch_wise_dino.py --help
 ```
@@ -18,23 +18,23 @@ python patch_wise_dino.py --help
 ### Vanilla Patch-Wise DINO training
 Run DINO with ViT-small network on a single node with 4 GPUs for 100 epochs with the following command.
 ```
-torchrun --nproc_per_node=4 patch_wise_dino.py --arch vit_small --data_path /path/to/imagenet/train --output_dir /path/to/saving_dir
+torchrun --nproc_per_node=4 patch_wise_dino.py --arch vit_small --data_path /path/to/imagenet-or-imagenet100-or-cifar10/train --output_dir /path/to/saving_dir
 ```
 
 ## Evaluation: k-NN classification on ImageNet
 To evaluate a simple k-NN classifier with a single GPU on a pre-trained model, run:
 ```
-torchrun --nproc_per_node=1 eval_knn.py --data_path /path/to/imagenet
+torchrun --nproc_per_node=1 eval_knn.py --data_path /path/to/imagenet-or-imagenet100-or-cifar10
 ```
 If you choose not to specify `--pretrained_weights`, then DINO reference weights are used by default. If you want instead to evaluate checkpoints from a run of your own, you can run for example:
 ```
-torchrun --nproc_per_node=1 eval_knn.py --pretrained_weights /path/to/checkpoint.pth --checkpoint_key teacher --data_path /path/to/imagenet 
+torchrun --nproc_per_node=1 eval_knn.py --pretrained_weights /path/to/checkpoint.pth --checkpoint_key teacher --data_path /path/to/imagenet-or-imagenet100-or-cifar10 
 ```
 
 ## Evaluation: Linear classification on ImageNet
 To train a supervised linear classifier on frozen weights on a single node with 4 gpus, run:
 ```
-torchrun --nproc_per_node=4 eval_linear.py --data_path /path/to/imagenet
+torchrun --nproc_per_node=4 eval_linear.py --data_path /path/to/imagenet-or-imagenet100-or-cifar10
 ```
 
 
