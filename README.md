@@ -1,4 +1,4 @@
-# Local-Global Self-Supervised Visual Representation Learning
+# LG-Self: Local-Global Self-Supervised Visual Representation Learning
 
 PyTorch implementation for Patch-Wise DINO. For details, see **Local-Global Self-Supervised Visual Representation Learning**.  
  [[`arXiv`](http://arxiv.org/abs/2310.18651)]
