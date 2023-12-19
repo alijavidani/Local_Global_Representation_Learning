@@ -1,10 +1,10 @@
-# LG-Self: Local-Global Self-Supervised Visual Representation Learning
+# PW-Self: Patch-Wise Self-Supervised Visual Representation Learning
 
-PyTorch implementation for Patch-Wise DINO. For details, see **Local-Global Self-Supervised Visual Representation Learning**.  
+PyTorch implementation for **PW-Self: Patch-Wise Self-Supervised Visual Representation Learning**.  
  [[`arXiv`](http://arxiv.org/abs/2310.18651)]
 
 <div align="center">
-  <img width="100%" alt="DINO illustration" src="./.github/Patch-Wise DINO.gif">
+  <img width="100%" alt="DINO illustration" src="./.github/GIF2.gif">
 </div>
 
 ## Training
@@ -78,10 +78,12 @@ It generates an image in same directory with the name result.png and prints the 
 ## Citation
 If you find this repository useful, please consider giving a star :star: and citation :t-rex::
 ```
-@inproceedings{ali2023local-global,
-  title={Local-Global Self-Supervised Visual Representation Learning},
-  author={Javidani, Ali and Sadeghi, Mohammad Amin and Nadjar Araabi, Babak},
-  booktitle={arXiv},
-  year={2023}
+@misc{javidani2023pwself,
+      title={PW-Self: Patch-Wise Self-Supervised Visual Representation Learning}, 
+      author={Ali Javidani and Mohammad Amin Sadeghi and Babak Nadjar Araabi},
+      year={2023},
+      eprint={2310.18651},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
 }
 ```
