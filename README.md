@@ -14,6 +14,7 @@ This codebase has been developed on top of the official [DINO](https://github.co
 ```
 python patch_wise_dino.py --help
 ```
+Please copy the content of transforms.py in the following address: "https://github.com/alijavidani/Local_Global_Representation_Learning/blob/main/dino_env/Lib/site-packages/torchvision/transforms/transforms.py" to your transforms.py in torchvision library inside your virtual environment.
 
 ### Vanilla Patch-Wise DINO training
 Run DINO with ViT-small network on a single node with 4 GPUs for 100 epochs with the following command.
@@ -64,6 +65,12 @@ Step 3: Run copy detection:
 ```
 torchrun --use_env --nproc_per_node=1 eval_copy_detection.py --data_path /path/to/copydays/ --whitening_path /path/to/whitening_data/ --distractors_path /path/to/distractors/
 ```
+
+### Boosting PW-Self performance:
+You can improve the performance of the vanilla run by:
+- training for more epochs: `--epochs 300`,
+- increasing the teacher temperature: `--teacher_temp 0.07 --warmup_teacher_temp_epochs 30`.
+- removing last layer normalization (only safe with `--arch vit_small`): `--norm_last_layer false`,
 
 
 ### Patch-Matching
